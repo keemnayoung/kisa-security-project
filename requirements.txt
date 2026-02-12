@@ -1,0 +1,6 @@
+streamlit
+pymysql
+ansible-runner
+python-dotenv
+plotly
+pandas
