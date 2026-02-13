@@ -81,12 +81,45 @@ class DBConnector:
     # =========================================================
     # remediation_logs
     # =========================================================
-    def insert_remediation_log(self, server_id, item_code, action_date, is_success, raw_evidence):
-        query = """
+    def insert_remediation_log(self, server_id, item_code, action_date, is_success, raw_evidence, failure_reason=None):
+        """
+        failure_reason 컬럼이 있는 최신 스키마를 우선 사용하고,
+        구버전 스키마(컬럼 없음)인 경우 자동으로 fallback INSERT를 수행한다.
+        """
+        query_with_reason = """
+            INSERT INTO remediation_logs (server_id, item_code, action_date, is_success, failure_reason, raw_evidence)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        query_legacy = """
             INSERT INTO remediation_logs (server_id, item_code, action_date, is_success, raw_evidence)
             VALUES (%s, %s, %s, %s, %s)
         """
-        return self._execute(query, (server_id, item_code, action_date, is_success, raw_evidence))
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute(
+                query_with_reason,
+                (server_id, item_code, action_date, is_success, failure_reason, raw_evidence),
+            )
+            self.connection.commit()
+            return cursor.lastrowid
+        except Error as e:
+            # Unknown column 'failure_reason' in 'field list'
+            if getattr(e, "errno", None) == 1054:
+                try:
+                    cursor = self.connection.cursor()
+                    cursor.execute(
+                        query_legacy,
+                        (server_id, item_code, action_date, is_success, raw_evidence),
+                    )
+                    self.connection.commit()
+                    return cursor.lastrowid
+                except Error as legacy_e:
+                    print(f"[DB ERROR] 쿼리 실행 실패: {legacy_e}")
+                    self.connection.rollback()
+                    return None
+            print(f"[DB ERROR] 쿼리 실행 실패: {e}")
+            self.connection.rollback()
+            return None
 
     # =========================================================
     # servers

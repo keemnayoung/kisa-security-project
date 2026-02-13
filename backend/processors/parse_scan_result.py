@@ -13,23 +13,57 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from db.connector import DBConnector
 from config import SCAN_OUTPUT_DIR
 
+# DB 스크립트: PASS/FAIL, OS 스크립트: 양호/취약 → 통일
+STATUS_MAP = {
+    'PASS': '양호',
+    'FAIL': '취약',
+    '양호': '양호',
+    '취약': '취약',
+}
+
 
 def parse_filename(filename):
     """
     파일명에서 company, server_id, item_code 추출
-    예: NAVER_rocky9_1_check_U01.json → ('NAVER', 'rocky9_1', 'U-01')
+
+    OS:  NAVER_rocky9_1_check_U01.json → ('NAVER', 'rocky9_1', 'U-01')
+    DB:  NAVER_rocky9_1_check_D01.json → ('NAVER', 'rocky9_1', 'D-01')
     """
     name = os.path.basename(filename).replace('.json', '')
     parts = name.split('_')
 
-    raw_code = parts[-1]  # U01
-    item_code = raw_code[0] + '-' + raw_code[1:]  # U-01
+    raw_code = parts[-1]  # U01 or D01
+    item_code = raw_code[0] + '-' + raw_code[1:]  # U-01 or D-01
 
     check_idx = parts.index('check')
     company = parts[0]
     server_id = '_'.join(parts[1:check_idx])  # rocky9_1
 
     return company, server_id, item_code
+
+
+def normalize_status(raw_status):
+    """PASS/FAIL → 양호/취약 변환"""
+    return STATUS_MAP.get(raw_status, raw_status)
+
+
+def extract_raw_evidence(data, fallback_path):
+    """
+    점검 스크립트별 출력 차이를 흡수한다.
+    1) raw_evidence (string/dict)
+    2) evidence (dict)
+    """
+    raw = data.get('raw_evidence')
+    if isinstance(raw, dict):
+        return json.dumps(raw, ensure_ascii=False)
+    if isinstance(raw, str) and raw.strip():
+        return raw
+
+    evidence = data.get('evidence')
+    if isinstance(evidence, dict):
+        return json.dumps(evidence, ensure_ascii=False)
+
+    return fallback_path
 
 
 def parse_and_insert():
@@ -55,11 +89,14 @@ def parse_and_insert():
             with open(json_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
+            # status 통일 (PASS→양호, FAIL→취약)
+            status = normalize_status(data['status'])
+
             result = db.insert_scan_result(
                 server_id=server_id,
                 item_code=data.get('item_code', item_code),
-                status=data['status'],
-                raw_evidence=json_file,
+                status=status,
+                raw_evidence=extract_raw_evidence(data, json_file),
                 scan_date=data['scan_date']
             )
 

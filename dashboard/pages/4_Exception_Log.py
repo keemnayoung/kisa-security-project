@@ -65,7 +65,7 @@ with tab1:
                 'reason': '예외 사유',
                 'valid_date': '만료일',
             })
-            st.dataframe(df_valid, use_container_width=True, hide_index=True)
+            st.dataframe(df_valid, width="stretch", hide_index=True)
 
             # 예외 삭제
             st.divider()
@@ -97,7 +97,7 @@ with tab1:
                 'reason': '예외 사유',
                 'valid_date': '만료일',
             })
-            st.dataframe(df_expired, use_container_width=True, hide_index=True)
+            st.dataframe(df_expired, width="stretch", hide_index=True)
     else:
         st.info("예외 처리된 항목이 없습니다.")
 

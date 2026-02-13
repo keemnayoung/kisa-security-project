@@ -1,0 +1,12 @@
+---
+# ============================================================
+# scan_all.yml: OS + DB 통합 점검
+# ============================================================
+- name: 전체 취약점 점검 (OS + DB)
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: OS 점검 실행
+      command: ansible-playbook -i {{ playbook_dir }}/../inventories/hosts.ini {{ playbook_dir }}/scan_os.yml
+    - name: DB 점검 실행
+      command: ansible-playbook -i {{ playbook_dir }}/../inventories/hosts.ini {{ playbook_dir }}/scan_db.yml

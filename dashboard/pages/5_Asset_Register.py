@@ -225,7 +225,7 @@ with tab1:
             'manager': '담당자', 'department': '부서'
         })
         st.markdown('<div class="table-container">', unsafe_allow_html=True)
-        st.dataframe(df[['자산명', '회사', 'IP', 'OS', 'DB', '상태', '담당자', '부서']], use_container_width=True, hide_index=True)
+        st.dataframe(df[['자산명', '회사', 'IP', 'OS', 'DB', '상태', '담당자', '부서']], width="stretch", hide_index=True)
         st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.info("등록된 자산이 없습니다.")
@@ -337,9 +337,9 @@ with tab2:
         st.markdown('<div class="asset-actions">', unsafe_allow_html=True)
         b1, b2 = st.columns([1, 1], gap="medium")
         with b1:
-            clear_clicked = st.form_submit_button("CLEAR", use_container_width=True)
+            clear_clicked = st.form_submit_button("CLEAR", width="stretch")
         with b2:
-            register_clicked = st.form_submit_button("REGISTER", type="primary", use_container_width=True)
+            register_clicked = st.form_submit_button("REGISTER", type="primary", width="stretch")
         st.markdown('</div>', unsafe_allow_html=True)
 
     # CLEAR 처리

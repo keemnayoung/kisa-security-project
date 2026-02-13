@@ -17,8 +17,11 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
 
-    * { font-family: 'Pretendard', sans-serif !important; }
+    *:not(.material-icons):not(.material-symbols-rounded):not(.material-symbols-outlined) {
+        font-family: 'Pretendard', sans-serif !important;
+    }
 
     /* 사이드바 */
     [data-testid="stSidebar"] {

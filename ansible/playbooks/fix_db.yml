@@ -1,0 +1,109 @@
+---
+# ============================================================
+# fix_db.yml: DB 취약점 조치 플레이북
+# MySQL / PostgreSQL 조치 스크립트 실행
+# ============================================================
+- name: DB 취약점 조치
+  hosts: "{{ target_hosts | default('all') }}"
+  become: yes
+  gather_facts: no
+
+  vars:
+    fix_output_dir: /tmp/audit/fix
+    scripts_base: "{{ playbook_dir }}/../../scripts/db"
+    remote_tmp: /tmp/audit
+
+  tasks:
+    # ─── MySQL 조치 (rocky9_mysql 그룹) ───
+    - name: "[MySQL] 조치 스크립트 목록 수집"
+      delegate_to: localhost
+      become: no
+      find:
+        paths: "{{ scripts_base }}/mysql"
+        patterns: "fix_D*.sh"
+        recurse: yes
+      register: mysql_fix_scripts
+      when: "'rocky9_mysql' in group_names"
+
+    - name: "[MySQL] 조치 스크립트 복사"
+      copy:
+        src: "{{ item.path }}"
+        dest: "{{ remote_tmp }}/{{ item.path | basename }}"
+        mode: '0755'
+      loop: "{{ mysql_fix_scripts.files | default([]) }}"
+      when: "'rocky9_mysql' in group_names"
+
+    - name: "[MySQL] 조치 스크립트 실행"
+      shell: "bash {{ remote_tmp }}/{{ item.path | basename }}"
+      environment:
+        MYSQL_USER: root
+        MYSQL_PASSWORD: "QWER1234!"
+      loop: "{{ mysql_fix_scripts.files | default([]) }}"
+      register: mysql_fix_results
+      when: "'rocky9_mysql' in group_names"
+      ignore_errors: yes
+
+    # ─── PostgreSQL 조치 (rocky10_postgres 그룹) ───
+    - name: "[PostgreSQL] 조치 스크립트 목록 수집"
+      delegate_to: localhost
+      become: no
+      find:
+        paths: "{{ scripts_base }}/postgres"
+        patterns: "fix_D*.sh"
+        recurse: yes
+      register: pg_fix_scripts
+      when: "'rocky10_postgres' in group_names"
+
+    - name: "[PostgreSQL] 조치 스크립트 복사"
+      copy:
+        src: "{{ item.path }}"
+        dest: "{{ remote_tmp }}/{{ item.path | basename }}"
+        mode: '0755'
+      loop: "{{ pg_fix_scripts.files | default([]) }}"
+      when: "'rocky10_postgres' in group_names"
+
+    - name: "[PostgreSQL] 조치 스크립트 실행"
+      shell: "bash {{ remote_tmp }}/{{ item.path | basename }}"
+      loop: "{{ pg_fix_scripts.files | default([]) }}"
+      register: pg_fix_results
+      when: "'rocky10_postgres' in group_names"
+      ignore_errors: yes
+
+    # ─── 결과 수집 (공통) ───
+    - name: 로컬 저장 디렉토리 생성
+      file:
+        path: "{{ fix_output_dir }}"
+        state: directory
+        mode: '0755'
+      delegate_to: localhost
+      become: no
+      run_once: true
+
+    - name: "[MySQL] 조치 결과 JSON 저장"
+      copy:
+        content: "{{ item.stdout }}"
+        dest: "{{ fix_output_dir }}/{{ company }}_{{ server_id }}_{{ item.item.path | basename | replace('.sh', '') }}.json"
+      delegate_to: localhost
+      become: no
+      loop: "{{ mysql_fix_results.results | default([]) }}"
+      when:
+        - "'rocky9_mysql' in group_names"
+        - item.stdout is defined
+        - item.stdout | length > 0
+
+    - name: "[PostgreSQL] 조치 결과 JSON 저장"
+      copy:
+        content: "{{ item.stdout }}"
+        dest: "{{ fix_output_dir }}/{{ company }}_{{ server_id }}_{{ item.item.path | basename | replace('.sh', '') }}.json"
+      delegate_to: localhost
+      become: no
+      loop: "{{ pg_fix_results.results | default([]) }}"
+      when:
+        - "'rocky10_postgres' in group_names"
+        - item.stdout is defined
+        - item.stdout | length > 0
+
+    # ─── 임시 파일 정리 ───
+    - name: 임시 스크립트 정리
+      shell: "rm -f {{ remote_tmp }}/check_D*.sh {{ remote_tmp }}/fix_D*.sh {{ remote_tmp }}/_pg_common.sh"
+      ignore_errors: yes

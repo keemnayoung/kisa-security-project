@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS scan_history (
     server_id       VARCHAR(100)    NOT NULL,
     item_code       VARCHAR(10)     NOT NULL,
     status          VARCHAR(10)     NOT NULL,
-    raw_evidence    VARCHAR(500)    NOT NULL,
+    raw_evidence    LONGTEXT        NOT NULL,
     scan_date       DATETIME        NOT NULL,
     FOREIGN KEY (server_id) REFERENCES servers(server_id),
     FOREIGN KEY (item_code) REFERENCES kisa_items(item_code)
@@ -49,7 +49,8 @@ CREATE TABLE IF NOT EXISTS remediation_logs (
     item_code       VARCHAR(10)     NOT NULL,
     action_date     DATETIME        NOT NULL,
     is_success      BOOLEAN         NOT NULL,
-    raw_evidence    VARCHAR(500)    NOT NULL,
+    failure_reason  VARCHAR(500)    DEFAULT NULL,
+    raw_evidence    LONGTEXT        NOT NULL,
     FOREIGN KEY (server_id) REFERENCES servers(server_id),
     FOREIGN KEY (item_code) REFERENCES kisa_items(item_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
