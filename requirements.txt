@@ -1,6 +1,7 @@
 streamlit
 pymysql
 ansible-runner
+mysql-connector-python
 python-dotenv
 plotly
 pandas

@@ -1,0 +1,68 @@
+---
+# ============================================================
+# scan_os.yml: OS 취약점 점검 플레이북
+# ============================================================
+- name: OS 취약점 점검
+  hosts: "{{ target_hosts | default('all') }}"
+  become: yes
+  gather_facts: no
+
+  vars:
+    scan_output_dir: /tmp/audit/check
+    scripts_dir: "{{ playbook_dir }}/../../scripts/os"
+
+  tasks:
+    # 1. 점검 결과 저장 디렉토리 생성
+    - name: 점검 결과 디렉토리 생성
+      file:
+        path: "{{ scan_output_dir }}"
+        state: directory
+        mode: '0755'
+
+    # 2. 점검 스크립트 목록 수집 (master-node에서)
+    - name: 점검 스크립트 목록 수집
+      delegate_to: localhost
+      become: no
+      find:
+        paths: "{{ scripts_dir }}"
+        patterns: "check_U*.sh"
+        recurse: yes
+      register: check_scripts
+
+    # 3. 점검 스크립트를 대상 서버에 복사
+    - name: 점검 스크립트 복사
+      copy:
+        src: "{{ item.path }}"
+        dest: "/tmp/audit/{{ item.path | basename }}"
+        mode: '0755'
+      loop: "{{ check_scripts.files }}"
+
+    # 4. 각 점검 스크립트 실행
+    - name: 점검 스크립트 실행
+      shell: "bash /tmp/audit/{{ item.path | basename }}"
+      loop: "{{ check_scripts.files }}"
+      register: scan_results
+
+    # 5. JSON 결과를 대상 서버에 파일로 저장
+    - name: 점검 결과 JSON 저장
+      copy:
+        content: "{{ item.stdout }}"
+        dest: "{{ scan_output_dir }}/{{ company }}_{{ server_id }}_{{ item.item.path | basename | replace('.sh', '') }}.json"
+      loop: "{{ scan_results.results }}"
+      when: item.stdout is defined and item.stdout | length > 0
+
+    # 6. 결과 JSON을 master-node로 가져오기
+    - name: 점검 결과 master-node로 수집
+      fetch:
+        src: "{{ scan_output_dir }}/{{ company }}_{{ server_id }}_{{ item.item.path | basename | replace('.sh', '') }}.json"
+        dest: "{{ scan_output_dir }}/"
+        flat: yes
+      loop: "{{ scan_results.results }}"
+      when: item.stdout is defined and item.stdout | length > 0
+
+    # 7. 대상 서버 임시 파일 정리
+    - name: 임시 스크립트 정리
+      file:
+        path: "/tmp/audit/{{ item.path | basename }}"
+        state: absent
+      loop: "{{ check_scripts.files }}"
