@@ -1,0 +1,60 @@
+- name: 보안 전수 점검 (Linux & DB 통합 자동화)
+  hosts: target_servers
+  become: yes
+  vars:
+    mysql_env_src: "./scripts/unix/6_db/mysql/mysql_fix.env"
+    mysql_env_dest: "/tmp/security_project_mysql_fix.env"
+  tasks:
+    - name: "1. OS 및 DB 진단 스크립트 목록 가져오기"
+      delegate_to: localhost
+      become: no
+      find:
+        paths: "./scripts/unix"
+        patterns: "check_*.sh"
+        recurse: yes
+      register: script_files
+
+    - name: "1-1. MySQL 접속 환경파일 존재 확인(메인 서버)"
+      delegate_to: localhost
+      become: no
+      stat:
+        path: "{{ mysql_env_src }}"
+      register: mysql_env_local
+      run_once: true
+
+    - name: "1-2. MySQL 접속 환경파일 대상 서버 배포(Rocky9)"
+      copy:
+        src: "{{ mysql_env_src }}"
+        dest: "{{ mysql_env_dest }}"
+        owner: root
+        group: root
+        mode: "0600"
+      when:
+        - "'Rocky9' in inventory_hostname"
+        - mysql_env_local.stat.exists
+
+    - name: "2. 대상 서버 환경에 맞는 스크립트 실행"
+      script: "{{ item.path }}"
+      register: diag_results
+      loop: "{{ script_files.files }}"
+      environment:
+        MYSQL_ENV_FILE: "{{ mysql_env_dest }}"
+      when: 
+        # [조건 추가] target_id 필터 유지 + DB 타입별 실행 제한
+        - target_id is not defined or (target_id | string) in (item.path | basename)
+        # [분기 로직] 로키9면 mysql 스크립트만, 로키10이면 postgres 스크립트만 실행
+        - ("6_db/mysql" not in (item.path | lower)) or ("Rocky9" in inventory_hostname)
+        - ("6_db/postgresql" not in (item.path | lower)) or ("Rocky10" in inventory_hostname)
+
+    - name: "3. 결과 수집 및 JSON 저장"
+      delegate_to: localhost
+      become: no
+      copy:
+        # [정규식 보강] JSON 시작({)과 끝(}) 사이의 유효한 데이터만 추출
+        content: "{{ item.stdout | regex_search('\\{[\\s\\S]*\\}') | default('{}', true) }}"
+        dest: "./results/{{ inventory_hostname }}_{{ item.item.path | basename | replace('.sh', '') | replace('-', '') }}.json"
+        force: yes 
+      loop: "{{ diag_results.results }}"
+      when: 
+        - item.skipped is not defined or not item.skipped
+        - item.stdout is defined and '{' in item.stdout
