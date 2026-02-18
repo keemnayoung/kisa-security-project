@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS scan_history (
     status          VARCHAR(10)     NOT NULL,
     raw_evidence    LONGTEXT        NOT NULL,
     scan_date       DATETIME        NOT NULL,
+    UNIQUE KEY uq_server_item (server_id, item_code),
     FOREIGN KEY (server_id) REFERENCES servers(server_id),
     FOREIGN KEY (item_code) REFERENCES kisa_items(item_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -69,8 +70,11 @@ CREATE TABLE IF NOT EXISTS users (
     user_id         INT AUTO_INCREMENT PRIMARY KEY,
     user_name       VARCHAR(100)    NOT NULL UNIQUE,
     user_passwd     VARCHAR(255)    NOT NULL,
+    prev_user_passwd VARCHAR(255)   DEFAULT NULL,
     role            VARCHAR(20)     NOT NULL DEFAULT 'VIEWER',
     company         VARCHAR(100)    NOT NULL,
+    must_change_password BOOLEAN     NOT NULL DEFAULT 1,
+    password_changed_at  DATETIME    DEFAULT NULL,
     last_login      DATETIME        NOT NULL,
     created_at      DATETIME        NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

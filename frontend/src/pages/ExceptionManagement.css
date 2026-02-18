@@ -1,0 +1,363 @@
+/* ===== 예외 처리 관리 페이지 ===== */
+
+.exception-page {
+  min-height: 100vh;
+  background: #F8FAFC;
+  padding: 32px 150px;
+  font-family: 'Pretendard', -apple-system, sans-serif;
+}
+
+/* 헤더 */
+.exception-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.exception-page-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #191F28;
+  margin: 0 0 4px;
+}
+
+.exception-page-subtitle {
+  font-size: 14px;
+  color: #8B95A1;
+  margin: 0;
+}
+
+.exception-register-btn {
+  padding: 12px 24px;
+  background: #3182F7;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Pretendard', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.exception-register-btn:hover {
+  background: #1B64DA;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(49, 130, 247, 0.25);
+}
+
+/* 요약 카드 */
+.exception-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-card {
+  background: white;
+  border: 1px solid #E5E8EB;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s;
+}
+
+.summary-card:hover {
+  border-color: #B0C4DE;
+}
+
+.summary-card-label {
+  font-size: 14px;
+  color: #8B95A1;
+  font-weight: 500;
+}
+
+.summary-card-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #191F28;
+}
+
+.summary-card.active .summary-card-value {
+  color: #3182F7;
+}
+
+.summary-card.expired .summary-card-value {
+  color: #8B95A1;
+}
+
+/* 필터 바 */
+.exception-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 4px;
+  background: #F2F4F6;
+  border-radius: 10px;
+  padding: 4px;
+}
+
+.filter-tab {
+  padding: 8px 20px;
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #8B95A1;
+  cursor: pointer;
+  border-radius: 8px;
+  font-family: 'Pretendard', sans-serif;
+  transition: all 0.2s;
+}
+
+.filter-tab.active {
+  background: white;
+  color: #191F28;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.filter-tab:hover:not(.active) {
+  color: #333D4B;
+}
+
+.exception-search-box input {
+  padding: 10px 16px;
+  border: 1.5px solid #E5E8EB;
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: 'Pretendard', sans-serif;
+  color: #333D4B;
+  width: 260px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.exception-search-box input:focus {
+  border-color: #3182F7;
+}
+
+.exception-search-box input::placeholder {
+  color: #AEB5BC;
+}
+
+/* 테이블 카드 */
+.exception-table-card {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #E5E8EB;
+  overflow-x: auto;
+}
+
+.exception-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.exception-table thead {
+  background: #F8FAFC;
+}
+
+.exception-table th {
+  padding: 14px 14px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: #8B95A1;
+  border-bottom: 1px solid #E5E8EB;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.exception-table td {
+  padding: 14px 14px;
+  font-size: 13px;
+  color: #333D4B;
+  border-bottom: 1px solid #F2F4F6;
+  vertical-align: middle;
+}
+
+/* 컬럼 너비 — 사유를 최대한 넓게 */
+.exception-table th:nth-child(1),
+.exception-table td:nth-child(1) { width: 12%; }  /* 서버 ID */
+.exception-table th:nth-child(2),
+.exception-table td:nth-child(2) { width: 10%; }  /* IP */
+.exception-table th:nth-child(3),
+.exception-table td:nth-child(3) { width: 5%; }   /* 번호 */
+.exception-table th:nth-child(4),
+.exception-table td:nth-child(4) { width: 13%; }  /* 점검 항목 */
+.exception-table th:nth-child(5),
+.exception-table td:nth-child(5) { width: 5%; }   /* 위험도 */
+.exception-table th:nth-child(6),
+.exception-table td:nth-child(6) { width: auto; }  /* 사유 — 나머지 전부 */
+.exception-table th:nth-child(7),
+.exception-table td:nth-child(7) { width: 11%; }  /* 유효 기한 */
+.exception-table th:nth-child(8),
+.exception-table td:nth-child(8) { width: 5%; }   /* 상태 */
+.exception-table th:nth-child(9),
+.exception-table td:nth-child(9) { width: 5%; }   /* 관리 */
+
+.exception-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.exception-table tbody tr:hover {
+  background: #FAFBFC;
+}
+
+.exception-table tbody tr.row-expired td {
+  color: #AEB5BC;
+}
+
+/* 컬럼별 스타일 */
+.exception-table .col-server {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exception-table .col-ip {
+  color: #8B95A1;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exception-table .col-code {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.exception-table .col-item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exception-table .col-reason {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+.exception-table .col-date {
+  white-space: nowrap;
+  font-size: 12px;
+  color: #8B95A1;
+}
+
+.exception-table .col-status {
+  white-space: nowrap;
+}
+
+.exception-table .col-manage {
+  white-space: nowrap;
+}
+
+/* 위험도 배지 */
+.severity-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.severity-badge[data-severity="\uc0c1"] {
+  background: #FFEAEA;
+  color: #F04452;
+}
+
+.severity-badge[data-severity="\uc911"] {
+  background: #FFF3E0;
+  color: #FF6B00;
+}
+
+.severity-badge[data-severity="\ud558"] {
+  background: #FFF8E1;
+  color: #F9A825;
+}
+
+/* 상태 배지 */
+.ex-status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ex-status-badge.active {
+  background: #E8F3FF;
+  color: #3182F7;
+}
+
+.ex-status-badge.expired {
+  background: #F2F4F6;
+  color: #8B95A1;
+}
+
+/* 삭제 버튼 */
+.delete-btn {
+  padding: 5px 14px;
+  border: 1px solid #F04452;
+  background: white;
+  color: #F04452;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Pretendard', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-btn:hover {
+  background: #FFEAEA;
+}
+
+/* 빈 상태 */
+.exception-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+  color: #8B95A1;
+  font-size: 15px;
+}
+
+/* 반응형 */
+@media (max-width: 1200px) {
+  .exception-page {
+    padding: 24px 32px;
+  }
+}
+
+@media (max-width: 768px) {
+  .exception-summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .exception-filter-bar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .exception-search-box input {
+    width: 100%;
+  }
+}

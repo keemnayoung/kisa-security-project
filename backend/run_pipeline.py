@@ -153,9 +153,14 @@ def main():
     if command == 'mock':
         run_mock_generator()
     elif command == 'scan':
-        run_scan_pipeline()
+        ok = bool(run_scan_pipeline())
+        if not ok:
+            # Make failures visible to callers (run.sh / dashboard) by returning non-zero.
+            sys.exit(2)
     elif command == 'fix':
-        run_fix_pipeline()
+        ok = bool(run_fix_pipeline())
+        if not ok:
+            sys.exit(2)
     elif command == 'score':
         server_id = sys.argv[2] if len(sys.argv) > 2 else None
         run_score_pipeline(server_id)

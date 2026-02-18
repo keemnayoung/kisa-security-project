@@ -10,59 +10,156 @@
   vars:
     scan_output_dir: /tmp/audit/check
     scripts_dir: "{{ playbook_dir }}/../../scripts/os"
+    remote_tmp: /tmp/audit
+    local_bundle_path: /tmp/audit/os_checks_bundle.tar.gz
 
   tasks:
-    # 1. 점검 결과 저장 디렉토리 생성
-    - name: 점검 결과 디렉토리 생성
+    # 1) 대상 서버 디렉토리 준비
+    - name: 임시/결과 디렉토리 생성
       file:
-        path: "{{ scan_output_dir }}"
+        path: "{{ item }}"
         state: directory
         mode: '0755'
+      loop:
+        - "{{ remote_tmp }}"
+        - "{{ remote_tmp }}/work_os_checks"
+        - "{{ scan_output_dir }}"
 
-    # 2. 점검 스크립트 목록 수집 (master-node에서)
-    - name: 점검 스크립트 목록 수집
+    - name: 로컬 번들 디렉토리 생성
       delegate_to: localhost
       become: no
-      find:
-        paths: "{{ scripts_dir }}"
-        patterns: "check_U*.sh"
-        recurse: yes
-      register: check_scripts
-
-    # 3. 점검 스크립트를 대상 서버에 복사
-    - name: 점검 스크립트 복사
-      copy:
-        src: "{{ item.path }}"
-        dest: "/tmp/audit/{{ item.path | basename }}"
+      file:
+        path: "/tmp/audit"
+        state: directory
         mode: '0755'
-      loop: "{{ check_scripts.files }}"
+      run_once: true
 
-    # 4. 각 점검 스크립트 실행
-    - name: 점검 스크립트 실행
-      shell: "bash /tmp/audit/{{ item.path | basename }}"
-      loop: "{{ check_scripts.files }}"
-      register: scan_results
+    # 3) 점검 스크립트를 tar.gz로 묶기 (controller에서 1회)
+    - name: 점검 스크립트 번들 생성(tar.gz)
+      delegate_to: localhost
+      become: no
+      archive:
+        path: "{{ scripts_dir }}"
+        dest: "{{ local_bundle_path }}"
+        format: gz
+      run_once: true
 
-    # 5. JSON 결과를 대상 서버에 파일로 저장
-    - name: 점검 결과 JSON 저장
+    # 4) 번들을 대상 서버로 복사 + 압축 해제
+    - name: 점검 스크립트 번들 복사
       copy:
-        content: "{{ item.stdout }}"
-        dest: "{{ scan_output_dir }}/{{ company }}_{{ server_id }}_{{ item.item.path | basename | replace('.sh', '') }}.json"
-      loop: "{{ scan_results.results }}"
-      when: item.stdout is defined and item.stdout | length > 0
+        src: "{{ local_bundle_path }}"
+        dest: "{{ remote_tmp }}/os_checks_bundle.tar.gz"
+        mode: '0644'
 
-    # 6. 결과 JSON을 master-node로 가져오기
-    - name: 점검 결과 master-node로 수집
+    - name: 점검 스크립트 번들 압축 해제 (python3 우선, tar fallback)
+      shell: |
+        set -e
+        if command -v python3 >/dev/null 2>&1; then
+          python3 -c "import tarfile; tar_path='{{ remote_tmp }}/os_checks_bundle.tar.gz'; dest='{{ remote_tmp }}/work_os_checks'; tf=tarfile.open(tar_path,'r:gz'); tf.extractall(dest); tf.close(); print('extracted_ok', tar_path, '->', dest)"
+        elif command -v tar >/dev/null 2>&1; then
+          tar -xzf "{{ remote_tmp }}/os_checks_bundle.tar.gz" -C "{{ remote_tmp }}/work_os_checks"
+        else
+          echo "ERROR: need python3 or tar to extract bundle" >&2
+          exit 2
+        fi
+
+    # 5) 원격에서 한 번에 실행(속도 개선: SSH 왕복 최소화)
+    - name: 점검 러너 스크립트 생성
+      copy:
+        dest: "{{ remote_tmp }}/run_os_checks.sh"
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          set -euo pipefail
+          WORKDIR="{{ remote_tmp }}/work_os_checks"
+          OUTDIR="{{ scan_output_dir }}"
+          COMPANY="{{ company }}"
+          SERVER_ID="{{ server_id }}"
+
+          mkdir -p "$OUTDIR"
+          : > "{{ remote_tmp }}/os_check_runner.log"
+          # Remove stale results so this run reflects what was actually executed now.
+          rm -f "$OUTDIR/${COMPANY}_${SERVER_ID}_check_U"*.json 2>/dev/null || true
+
+          mapfile -t scripts < <(find "$WORKDIR" -type f -name 'check_U*.sh' 2>/dev/null | sort)
+          scripts_found="$(printf '%s\n' "${scripts[@]:-}" | awk 'NF>0{c++} END{print c+0}')"
+          echo "scripts_found=${scripts_found}" >> "{{ remote_tmp }}/os_check_runner.log"
+          produced=0
+          for f in "${scripts[@]:-}"; do
+            base="$(basename "$f" .sh)"
+            out_path="$OUTDIR/${COMPANY}_${SERVER_ID}_${base}.json"
+            echo "run=${base} path=${f}" >> "{{ remote_tmp }}/os_check_runner.log"
+            # Each script prints a JSON object to stdout.
+            # Write to a temp file first so we can reliably detect empty output.
+            tmp_path="${out_path}.tmp"
+            bash "$f" >"$tmp_path" 2>>"{{ remote_tmp }}/os_check_runner.log" || rc=$?
+            rc="${rc:-0}"
+            if [[ "$rc" != "0" ]]; then
+              echo "rc=${base}=${rc}" >> "{{ remote_tmp }}/os_check_runner.log"
+            fi
+            if [[ -s "$tmp_path" ]] && grep -q '[^[:space:]]' "$tmp_path"; then
+              mv -f "$tmp_path" "$out_path"
+              produced=$((produced+1))
+              bytes="$(wc -c < "$out_path" | tr -d ' ')"
+              echo "wrote=$(basename "$out_path") bytes=${bytes}" >> "{{ remote_tmp }}/os_check_runner.log"
+            else
+              rm -f "$tmp_path" 2>/dev/null || true
+              echo "empty_output=${base}" >> "{{ remote_tmp }}/os_check_runner.log"
+            fi
+            unset rc
+          done
+
+          # If nothing was produced, fail early so the operator sees the problem.
+          echo "json_produced=${produced}" >> "{{ remote_tmp }}/os_check_runner.log"
+          if [[ "${produced}" == "0" ]]; then
+            echo "[ERROR] No JSON results produced under ${OUTDIR}" >> "{{ remote_tmp }}/os_check_runner.log"
+            exit 2
+          fi
+
+    - name: 점검 러너 실행
+      shell: "bash {{ remote_tmp }}/run_os_checks.sh"
+
+    # 6) 결과 번들 생성 + 1회 fetch + 로컬 압축 해제
+    - name: 점검 결과 번들 생성(tar.gz) (python3 우선, tar fallback)
+      shell: |
+        set -e
+        OUT_TAR="{{ remote_tmp }}/os_check_results_{{ company }}_{{ server_id }}.tar.gz"
+        if command -v python3 >/dev/null 2>&1; then
+          python3 -c "import os,tarfile; out_tar='{{ remote_tmp }}/os_check_results_{{ company }}_{{ server_id }}.tar.gz'; src_dir='{{ scan_output_dir }}'; tf=tarfile.open(out_tar,'w:gz'); [tf.add(os.path.join(src_dir,n), arcname=n) for n in sorted(os.listdir(src_dir)) if os.path.isfile(os.path.join(src_dir,n))]; tf.close(); print('tar_ok', out_tar)"
+        elif command -v tar >/dev/null 2>&1; then
+          tar -czf "$OUT_TAR" -C "{{ scan_output_dir }}" .
+        else
+          echo "ERROR: need python3 or tar to create result bundle" >&2
+          exit 2
+        fi
+
+    - name: 점검 결과 번들 수집(fetch)
       fetch:
-        src: "{{ scan_output_dir }}/{{ company }}_{{ server_id }}_{{ item.item.path | basename | replace('.sh', '') }}.json"
+        src: "{{ remote_tmp }}/os_check_results_{{ company }}_{{ server_id }}.tar.gz"
         dest: "{{ scan_output_dir }}/"
         flat: yes
-      loop: "{{ scan_results.results }}"
-      when: item.stdout is defined and item.stdout | length > 0
 
-    # 7. 대상 서버 임시 파일 정리
-    - name: 임시 스크립트 정리
+    - name: 점검 러너 로그 수집(fetch)
+      fetch:
+        src: "{{ remote_tmp }}/os_check_runner.log"
+        dest: "{{ scan_output_dir }}/"
+        flat: yes
+
+    - name: 점검 결과 번들 로컬 압축 해제
+      delegate_to: localhost
+      become: no
+      unarchive:
+        src: "{{ scan_output_dir }}/os_check_results_{{ company }}_{{ server_id }}.tar.gz"
+        dest: "{{ scan_output_dir }}/"
+        remote_src: no
+
+    # 7) 임시 파일 정리(원격)
+    - name: 임시 파일 정리
       file:
-        path: "/tmp/audit/{{ item.path | basename }}"
+        path: "{{ item }}"
         state: absent
-      loop: "{{ check_scripts.files }}"
+      loop:
+        - "{{ remote_tmp }}/os_checks_bundle.tar.gz"
+        - "{{ remote_tmp }}/run_os_checks.sh"
+        - "{{ remote_tmp }}/os_check_results_{{ company }}_{{ server_id }}.tar.gz"
+        - "{{ remote_tmp }}/work_os_checks"

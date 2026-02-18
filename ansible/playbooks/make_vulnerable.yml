@@ -1,0 +1,124 @@
+---
+- name: "KISA 리눅스 점검 항목(U-01 ~ U-67) 전체 취약화"
+  hosts: all
+  become: yes
+  tasks:
+
+    # --- [1. 계정 관리: U-01 ~ U-13] ---
+    - name: "U-01: root 원격 접속 허용"
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: "PermitRootLogin yes"
+      notify: Restart SSH
+
+    - name: "U-02, U-03: 패스워드 정책 및 잠금 임계값 무력화"
+      shell: |
+        sed -i 's/PASS_MIN_LEN.*/PASS_MIN_LEN    1/' /etc/login.defs
+        echo "minlen = 1" > /etc/security/pwquality.conf
+        # 잠금 정책 주석 처리
+        sed -i 's/auth.*pam_faillock.so/#&/g' /etc/pam.d/system-auth
+        sed -i 's/auth.*pam_faillock.so/#&/g' /etc/pam.d/password-auth
+
+    - name: "U-04, U-18: shadow 파일 권한 취약화 (666)"
+      file:
+        path: /etc/shadow
+        mode: '0666'
+
+    - name: "U-05, U-10: UID 0 중복 계정 및 중복 UID 생성"
+      shell: |
+        useradd -o -u 0 -g 0 -m badroot -p $(openssl passwd -1 1234) || true
+        useradd -u 1111 userA -p $(openssl passwd -1 1234) || true
+        useradd -o -u 1111 userB -p $(openssl passwd -1 1234) || true
+
+    - name: "U-11: 서비스 계정(daemon)에 쉘 부여"
+      user:
+        name: daemon
+        shell: /bin/bash
+
+    - name: "U-12: 세션 타임아웃 무력화"
+      lineinfile:
+        path: /etc/profile
+        line: "export TMOUT=0"
+
+    # --- [2. 파일 및 디렉터리 관리: U-14 ~ U-33] ---
+    - name: "U-14: root PATH에 '.' 추가"
+      lineinfile:
+        path: /root/.bashrc
+        line: "export PATH=$PATH:."
+
+    - name: "U-16, U-19, U-21, U-22: 주요 설정 파일 권한 완전 개방 (777)"
+      file:
+        path: "{{ item }}"
+        mode: '0777'
+      loop:
+        - /etc/passwd
+        - /etc/hosts
+        - /etc/rsyslog.conf
+        - /etc/services
+
+    - name: "U-23: SUID 설정된 위험한 파일 생성"
+      shell: |
+        touch /tmp/vulnerable_suid
+        chmod 4777 /tmp/vulnerable_suid
+
+    - name: "U-25: World Writable 파일 생성"
+      file:
+        path: /tmp/everyone_write.txt
+        state: touch
+        mode: '0777'
+
+    - name: "U-27, U-28: r-command 인증 파일 및 접근 제어 무력화"
+      shell: |
+        touch /root/.rhosts /etc/hosts.equiv
+        chmod 666 /root/.rhosts /etc/hosts.equiv
+        echo "ALL:ALL" > /etc/hosts.allow
+
+    - name: "U-30: UMASK 설정 취약화 (000)"
+      lineinfile:
+        path: /etc/profile
+        regexp: '^umask'
+        line: "umask 000"
+
+    # --- [3. 서비스 관리: U-34 ~ U-63] ---
+    - name: "취약한 서비스 패키지 설치 및 활성화 (Telnet, FTP, R-services 등)"
+      package:
+        name: [telnet-server, vsftpd, finger-server, rsh-server]
+        state: present
+      ignore_errors: yes
+
+    - name: "취약한 서비스 가동"
+      service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      loop: [telnet.socket, vsftpd]
+      ignore_errors: yes
+
+    - name: "U-53: FTP 배너에 서버 정보 노출"
+      lineinfile:
+        path: /etc/vsftpd/vsftpd.conf
+        line: "ftpd_banner=Welcome to vulnerable Rocky Linux 9.0"
+      notify: Restart VSFTPD
+
+    - name: "U-56: FTP root 접속 허용"
+      lineinfile:
+        path: /etc/vsftpd/ftpusers
+        regexp: '^root'
+        state: absent
+
+    # --- [4. 패치 및 로그 관리: U-64 ~ U-67] ---
+    - name: "U-67: 로그 디렉터리 권한 취약화"
+      file:
+        path: /var/log
+        mode: '0777'
+
+  handlers:
+    - name: Restart SSH
+      service:
+        name: sshd
+        state: restarted
+    - name: Restart VSFTPD
+      service:
+        name: vsftpd
+        state: restarted

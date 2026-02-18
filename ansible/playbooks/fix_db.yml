@@ -11,9 +11,41 @@
   vars:
     fix_output_dir: /tmp/audit/fix
     scripts_base: "{{ playbook_dir }}/../../scripts/db"
-    remote_tmp: /tmp/audit
+    remote_tmp: "/tmp/audit"
 
   tasks:
+    - name: per-run remote tmp 경로 고정
+      command: date +%Y%m%d_%H%M%S
+      register: _db_run_id
+      changed_when: false
+
+    - name: per-run remote tmp 설정
+      set_fact:
+        remote_tmp: "/tmp/audit/db_fix_{{ _db_run_id.stdout }}"
+
+    - name: 임시 디렉토리 생성 (/tmp/audit, per-run)
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /tmp/audit
+        - "{{ remote_tmp }}"
+
+    # ─── 조치 대상 item_codes 필터 로드 ───
+    - name: 조치 대상 item_codes 로드
+      set_fact:
+        db_fix_filter: "{{ (lookup('file', '/tmp/audit/fix_item_codes.json', errors='ignore') | default('[]', true)) | from_json | default([], true) | map('regex_replace', '-', '') | list }}"
+      delegate_to: localhost
+      become: no
+      run_once: true
+      ignore_errors: yes
+
+    - name: 필터 코드 확인
+      debug:
+        msg: "DB fix filter codes: {{ db_fix_filter | default([]) }}"
+      run_once: true
+
     # ─── MySQL 조치 (rocky9_mysql 그룹) ───
     - name: "[MySQL] 조치 스크립트 목록 수집"
       delegate_to: localhost
@@ -31,16 +63,23 @@
         dest: "{{ remote_tmp }}/{{ item.path | basename }}"
         mode: '0755'
       loop: "{{ mysql_fix_scripts.files | default([]) }}"
-      when: "'rocky9_mysql' in group_names"
+      when:
+        - "'rocky9_mysql' in group_names"
+        - db_fix_filter | default([]) | length == 0 or (item.path | basename | regex_replace('^fix_', '') | regex_replace('\\.sh$', '')) in (db_fix_filter | default([]))
 
     - name: "[MySQL] 조치 스크립트 실행"
       shell: "bash {{ remote_tmp }}/{{ item.path | basename }}"
       environment:
-        MYSQL_USER: root
-        MYSQL_PASSWORD: "QWER1234!"
+        # The scripts run *on the DB server itself*. Prefer local connection for speed/stability.
+        MYSQL_HOST: "127.0.0.1"
+        MYSQL_PORT: "{{ db_port | default('3306') }}"
+        MYSQL_USER: "{{ db_user | default('root') }}"
+        MYSQL_PASSWORD: "{{ db_passwd | default('') }}"
       loop: "{{ mysql_fix_scripts.files | default([]) }}"
       register: mysql_fix_results
-      when: "'rocky9_mysql' in group_names"
+      when:
+        - "'rocky9_mysql' in group_names"
+        - db_fix_filter | default([]) | length == 0 or (item.path | basename | regex_replace('^fix_', '') | regex_replace('\\.sh$', '')) in (db_fix_filter | default([]))
       ignore_errors: yes
 
     # ─── PostgreSQL 조치 (rocky10_postgres 그룹) ───
@@ -54,19 +93,46 @@
       register: pg_fix_scripts
       when: "'rocky10_postgres' in group_names"
 
+    - name: "[PostgreSQL] 조치 스크립트 디렉토리 생성"
+      file:
+        path: "/home/{{ ansible_user }}/kisa-security-project/scripts/db/postgres"
+        state: directory
+        mode: '0755'
+      when: "'rocky10_postgres' in group_names"
+
+    - name: "[PostgreSQL] 공통 스크립트(_pg_common.sh) 복사"
+      copy:
+        src: "{{ scripts_base }}/_pg_common.sh"
+        dest: "/home/{{ ansible_user }}/kisa-security-project/scripts/db/_pg_common.sh"
+        mode: '0755'
+      when: "'rocky10_postgres' in group_names"
+
     - name: "[PostgreSQL] 조치 스크립트 복사"
       copy:
         src: "{{ item.path }}"
-        dest: "{{ remote_tmp }}/{{ item.path | basename }}"
+        dest: "/home/{{ ansible_user }}/kisa-security-project/scripts/db/postgres/{{ item.path | basename }}"
         mode: '0755'
       loop: "{{ pg_fix_scripts.files | default([]) }}"
-      when: "'rocky10_postgres' in group_names"
+      when:
+        - "'rocky10_postgres' in group_names"
+        - db_fix_filter | default([]) | length == 0 or (item.path | basename | regex_replace('^fix_', '') | regex_replace('\\.sh$', '')) in (db_fix_filter | default([]))
 
     - name: "[PostgreSQL] 조치 스크립트 실행"
-      shell: "bash {{ remote_tmp }}/{{ item.path | basename }}"
+      shell: "bash /home/{{ ansible_user }}/kisa-security-project/scripts/db/postgres/{{ item.path | basename }}"
+      environment:
+        PGUSER: "{{ db_user | default('postgres') }}"
+        PGPASSWORD: "{{ db_passwd | default('') }}"
+        PGDATABASE: "{{ db_name | default('postgres') }}"
+        POSTGRES_HOST: "127.0.0.1"
+        POSTGRES_PORT: "{{ db_port | default('5432') }}"
+        POSTGRES_USER: "{{ db_user | default('postgres') }}"
+        POSTGRES_PASSWORD: "{{ db_passwd | default('') }}"
+        POSTGRES_DB: "{{ db_name | default('postgres') }}"
       loop: "{{ pg_fix_scripts.files | default([]) }}"
       register: pg_fix_results
-      when: "'rocky10_postgres' in group_names"
+      when:
+        - "'rocky10_postgres' in group_names"
+        - db_fix_filter | default([]) | length == 0 or (item.path | basename | regex_replace('^fix_', '') | regex_replace('\\.sh$', '')) in (db_fix_filter | default([]))
       ignore_errors: yes
 
     # ─── 결과 수집 (공통) ───
@@ -90,6 +156,7 @@
         - "'rocky9_mysql' in group_names"
         - item.stdout is defined
         - item.stdout | length > 0
+        - item is not skipped
 
     - name: "[PostgreSQL] 조치 결과 JSON 저장"
       copy:
@@ -102,8 +169,9 @@
         - "'rocky10_postgres' in group_names"
         - item.stdout is defined
         - item.stdout | length > 0
+        - item is not skipped
 
     # ─── 임시 파일 정리 ───
     - name: 임시 스크립트 정리
-      shell: "rm -f {{ remote_tmp }}/check_D*.sh {{ remote_tmp }}/fix_D*.sh {{ remote_tmp }}/_pg_common.sh"
+      shell: "rm -rf {{ remote_tmp }}"
       ignore_errors: yes

@@ -1,0 +1,339 @@
+/* ===== 예외 등록 모달 ===== */
+
+.exception-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: exModalFadeIn 0.2s ease;
+}
+
+@keyframes exModalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.exception-modal {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  padding: 32px;
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  animation: exModalSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes exModalSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.exception-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.exception-modal-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #191F28;
+  margin: 0;
+}
+
+.exception-modal-close {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #8B95A1;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.exception-modal-close:hover {
+  color: #333D4B;
+}
+
+/* 입력 필드 */
+.exception-modal-field {
+  margin-bottom: 20px;
+}
+
+.exception-modal-field label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333D4B;
+  margin-bottom: 8px;
+}
+
+.field-selected-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3182F7;
+  background: #E8F3FF;
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+.exception-modal-field input[type="text"],
+.exception-modal-field input[type="date"],
+.exception-modal-field select,
+.exception-modal-field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid #E5E8EB;
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: 'Pretendard', sans-serif;
+  color: #333D4B;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+  background: white;
+}
+
+.exception-modal-field input[type="text"]:focus,
+.exception-modal-field input[type="date"]:focus,
+.exception-modal-field select:focus,
+.exception-modal-field textarea:focus {
+  border-color: #3182F7;
+  box-shadow: 0 0 0 3px rgba(49, 130, 247, 0.08);
+}
+
+.exception-modal-field input:disabled,
+.exception-modal-field select:disabled {
+  background: #F8FAFC;
+  color: #8B95A1;
+  cursor: not-allowed;
+}
+
+.exception-modal-field textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #8B95A1;
+}
+
+.char-count {
+  display: block;
+  text-align: right;
+  font-size: 12px;
+  color: #AEB5BC;
+  margin-top: 4px;
+}
+
+/* ===== 서버 선택 패널 ===== */
+
+.ex-server-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid #E5E8EB;
+  border-radius: 12px 12px 0 0;
+  border-bottom: none;
+}
+
+.ex-server-search-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.ex-server-search-icon {
+  font-size: 14px;
+  color: #8B95A1;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+
+.ex-server-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  font-family: 'Pretendard', sans-serif;
+  color: #191F28;
+  padding: 9px 0;
+}
+
+.ex-server-search-input::placeholder {
+  color: #AEB5BC;
+}
+
+.ex-server-search-clear {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #8B95A1;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+}
+
+.ex-server-search-clear:hover {
+  color: #333D4B;
+}
+
+.ex-server-select-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6B7684;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 0;
+  border: none;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.ex-server-select-all:hover {
+  color: #3182F7;
+}
+
+.ex-server-select-all input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #3182F7;
+  cursor: pointer;
+}
+
+/* 서버 리스트 패널 */
+
+.ex-server-panel {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #E5E8EB;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+}
+
+.ex-server-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid #F2F4F6;
+  transition: background 0.15s;
+}
+
+.ex-server-item:last-child {
+  border-bottom: none;
+}
+
+.ex-server-item:hover {
+  background: #F8FAFC;
+}
+
+.ex-server-item.selected {
+  background: #F0F7FF;
+}
+
+.ex-server-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #3182F7;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ex-server-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #191F28;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ex-server-ip {
+  font-size: 12px;
+  color: #8B95A1;
+  white-space: nowrap;
+}
+
+.ex-server-empty {
+  padding: 24px;
+  text-align: center;
+  font-size: 13px;
+  color: #8B95A1;
+}
+
+/* 버튼 */
+.exception-modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.exception-modal-actions .btn-cancel {
+  flex: 0 0 auto;
+  padding: 14px 28px;
+  background: #F2F4F6;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: 'Pretendard', sans-serif;
+  color: #6B7684;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.exception-modal-actions .btn-cancel:hover {
+  background: #E5E8EB;
+}
+
+.exception-modal-actions .btn-submit {
+  flex: 1;
+  padding: 14px;
+  background: #3182F7;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: 'Pretendard', sans-serif;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.exception-modal-actions .btn-submit:hover:not(:disabled) {
+  background: #1B64DA;
+}
+
+.exception-modal-actions .btn-submit:disabled {
+  background: #AEB5BC;
+  cursor: not-allowed;
+}

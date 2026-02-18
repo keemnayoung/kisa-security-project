@@ -1,0 +1,400 @@
+/**
+ * 전수 점검 모달 스타일 (토스 디자인)
+ */
+
+/* 오버레이 */
+.scan-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 모달 */
+.scan-modal {
+  background: #FFFFFF;
+  border-radius: 24px;
+  padding: 48px;
+  max-width: 520px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  text-align: center;
+  animation: modalSlideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 로딩 애니메이션 */
+.scan-animation {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 32px;
+}
+
+.scan-spinner {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 4px solid #F2F4F6;
+  border-top-color: #3182F6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.scan-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+}
+
+/* 결과 아이콘 */
+.scan-result-icon {
+  font-size: 72px;
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 16px;
+  object-fit: contain;
+  animation: bounce 0.6s ease-out;
+}
+
+@keyframes bounce {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* 진행률 바 */
+.progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background: #F2F4F6;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3182F6 0%, #1B64DA 100%);
+  border-radius: 999px;
+  transition: width 0.3s ease-out;
+}
+
+.progress-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #3182F6;
+  margin-bottom: 32px;
+  font-family: 'Pretendard', -apple-system, sans-serif;
+}
+
+/* 텍스트 */
+.scan-headline {
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: -0.02em;
+  color: #191F28;
+  margin-bottom: 16px;
+  white-space: pre-line;
+}
+
+.scan-body {
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.6;
+  color: #6B7684;
+  margin-bottom: 32px;
+  white-space: pre-line;
+}
+
+.scan-body strong {
+  color: #191F28;
+  font-weight: 700;
+}
+
+.highlight-red {
+  color: #F04452;
+  font-weight: 700;
+}
+
+.highlight-orange {
+  color: #FF6B00;
+  font-weight: 700;
+}
+
+/* 스텝 인디케이터 */
+.step-indicator {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.step-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #E5E8EB;
+  transition: all 0.3s ease;
+}
+
+.step-dot.active {
+  background: #3182F6;
+  transform: scale(1.25);
+}
+
+/* 결과 요약 */
+.scan-result-summary {
+  margin: 32px 0;
+}
+
+.scan-stats {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin: 24px 0;
+  padding: 20px;
+  background: #F2F4F6;
+  border-radius: 16px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #6B7684;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: 'Pretendard', -apple-system, sans-serif;
+}
+
+.stat-value.danger {
+  color: #F04452;
+}
+
+.stat-value.safe {
+  color: #14CC7C;
+}
+
+.stat-value.warning {
+  color: #FF6B00;
+}
+
+.stat-value.primary {
+  color: #3182F6;
+}
+
+/* 버튼 */
+.btn-next,
+.btn-view-result {
+  width: 100%;
+  padding: 16px 24px;
+  background: #3182F6;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: 'Pretendard', -apple-system, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 24px;
+}
+
+.btn-next:hover,
+.btn-view-result:hover {
+  background: #1B64DA;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(49, 130, 246, 0.3);
+}
+
+.btn-next:active,
+.btn-view-result:active {
+  transform: translateY(0);
+}
+
+/* 페이지 인디케이터 */
+.page-indicator {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.page-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #E5E8EB;
+  transition: all 0.3s ease;
+}
+
+.page-dot.active {
+  background: #3182F6;
+  width: 24px;
+  border-radius: 4px;
+}
+
+/* 위험도 분포 */
+.risk-distribution {
+  margin: 24px 0;
+}
+
+.risk-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.risk-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #191F28;
+  min-width: 60px;
+}
+
+.risk-bar-container {
+  flex: 1;
+  height: 12px;
+  background: #F2F4F6;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.risk-bar {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.5s ease-out;
+}
+
+.risk-bar.low {
+  background: #FFBB00;
+}
+
+.risk-bar.medium {
+  background: #FF6B00;
+}
+
+.risk-bar.high {
+  background: #F04452;
+}
+
+.risk-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #191F28;
+  min-width: 40px;
+  text-align: right;
+}
+
+/* 결과 페이지 */
+.result-page {
+  animation: pageSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 반응형 */
+@media (max-width: 640px) {
+  .scan-modal {
+    padding: 32px 24px;
+    max-width: 100%;
+    margin: 16px;
+  }
+
+  .scan-headline {
+    font-size: 20px;
+  }
+
+  .scan-body {
+    font-size: 14px;
+  }
+
+  .scan-animation {
+    width: 100px;
+    height: 100px;
+  }
+
+  .scan-icon {
+    font-size: 40px;
+  }
+
+  .scan-stats {
+    flex-direction: column;
+    gap: 12px;
+  }
+}

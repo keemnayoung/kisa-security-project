@@ -7,6 +7,6 @@
   gather_facts: no
   tasks:
     - name: OS 점검 실행
-      command: ansible-playbook -i {{ playbook_dir }}/../inventories/hosts.ini {{ playbook_dir }}/scan_os.yml
+      command: ansible-playbook -i {{ playbook_dir }}/../inventories/hosts.ini --vault-password-file {{ playbook_dir }}/../../.vault_pass {{ playbook_dir }}/scan_os.yml
     - name: DB 점검 실행
-      command: ansible-playbook -i {{ playbook_dir }}/../inventories/hosts.ini {{ playbook_dir }}/scan_db.yml
+      command: ansible-playbook -i {{ playbook_dir }}/../inventories/hosts.ini --vault-password-file {{ playbook_dir }}/../../.vault_pass {{ playbook_dir }}/scan_db.yml

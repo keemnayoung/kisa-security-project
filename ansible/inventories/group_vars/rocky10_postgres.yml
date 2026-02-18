@@ -1,3 +1,5 @@
-db_type: postgres
+# PostgreSQL 공통 설정
+db_type: postgresql
 db_port: 5432
 db_user: postgres
+db_name: postgres

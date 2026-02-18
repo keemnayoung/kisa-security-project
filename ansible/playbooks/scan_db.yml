@@ -11,9 +11,27 @@
   vars:
     scan_output_dir: /tmp/audit/check
     scripts_base: "{{ playbook_dir }}/../../scripts/db"
-    remote_tmp: /tmp/audit
+    remote_tmp: "/tmp/audit"
 
   tasks:
+    - name: per-run remote tmp 경로 고정
+      command: date +%Y%m%d_%H%M%S
+      register: _db_run_id
+      changed_when: false
+
+    - name: per-run remote tmp 설정
+      set_fact:
+        remote_tmp: "/tmp/audit/db_check_{{ _db_run_id.stdout }}"
+
+    - name: 임시 디렉토리 생성 (/tmp/audit, per-run)
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /tmp/audit
+        - "{{ remote_tmp }}"
+
     # ─── MySQL 점검 (rocky9_mysql 그룹) ───
     - name: "[MySQL] 점검 스크립트 목록 수집"
       delegate_to: localhost
@@ -36,8 +54,14 @@
     - name: "[MySQL] 점검 스크립트 실행"
       shell: "bash {{ remote_tmp }}/{{ item.path | basename }}"
       environment:
-        MYSQL_USER: root
-        MYSQL_PASSWORD: "QWER1234!"
+        # Prefer per-asset credentials provided via extra-vars (from asset registration).
+        # Fallback to root/empty to keep backward-compatibility in lab setups.
+        # The scripts run *on the DB server itself*. Prefer local connection for speed/stability.
+        # (bind-address can differ per host; UNIX socket/local is most reliable.)
+        MYSQL_HOST: "127.0.0.1"
+        MYSQL_PORT: "{{ db_port | default('3306') }}"
+        MYSQL_USER: "{{ db_user | default('root') }}"
+        MYSQL_PASSWORD: "{{ db_passwd | default('') }}"
       loop: "{{ mysql_check_scripts.files | default([]) }}"
       register: mysql_check_results
       when: "'rocky9_mysql' in group_names"
@@ -54,11 +78,18 @@
       register: pg_check_scripts
       when: "'rocky10_postgres' in group_names"
 
-      # [추가됨] 디렉토리 먼저 만들기 
+      # [추가됨] 디렉토리 먼저 만들기
     - name: "[PostgreSQL] 점검 스크립트 디렉토리 생성"
       file:
         path: "/home/{{ ansible_user }}/kisa-security-project/scripts/db/postgres"
         state: directory
+        mode: '0755'
+      when: "'rocky10_postgres' in group_names"
+
+    - name: "[PostgreSQL] 공통 스크립트(_pg_common.sh) 복사"
+      copy:
+        src: "{{ scripts_base }}/_pg_common.sh"
+        dest: "/home/{{ ansible_user }}/kisa-security-project/scripts/db/_pg_common.sh"
         mode: '0755'
       when: "'rocky10_postgres' in group_names"
 
@@ -74,6 +105,15 @@
     # 2. 점검 스크립트 실행 (위랑 100% 똑같은 경로로 실행)
     - name: "[PostgreSQL] 점검 스크립트 실행"
       shell: "bash /home/{{ ansible_user }}/kisa-security-project/scripts/db/postgres/{{ item.path | basename }}"
+      environment:
+        PGUSER: "{{ db_user | default('postgres') }}"
+        PGPASSWORD: "{{ db_passwd | default('') }}"
+        PGDATABASE: "{{ db_name | default('postgres') }}"
+        POSTGRES_HOST: "127.0.0.1"
+        POSTGRES_PORT: "{{ db_port | default('5432') }}"
+        POSTGRES_USER: "{{ db_user | default('postgres') }}"
+        POSTGRES_PASSWORD: "{{ db_passwd | default('') }}"
+        POSTGRES_DB: "{{ db_name | default('postgres') }}"
       loop: "{{ pg_check_scripts.files | default([]) }}"
       register: pg_check_results
       when: "'rocky10_postgres' in group_names"
@@ -115,5 +155,5 @@
 
     # ─── 임시 파일 정리 ───
     - name: 임시 스크립트 정리
-      shell: "rm -f {{ remote_tmp }}/check_D*.sh {{ remote_tmp }}/fix_D*.sh {{ remote_tmp }}/run_*.sh {{ remote_tmp }}/_pg_common.sh"
+      shell: "rm -rf {{ remote_tmp }}"
       ignore_errors: yes

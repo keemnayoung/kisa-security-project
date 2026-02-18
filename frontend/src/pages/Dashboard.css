@@ -1,0 +1,60 @@
+.dashboard {
+  min-height: calc(100vh - 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-6);
+  margin-top: -30px;
+  background: var(--color-gray-50);
+}
+
+.dashboard-container {
+  max-width: 900px;
+  width: 100%;
+}
+
+.dashboard-header {
+  text-align: center;
+  margin-bottom: var(--spacing-12);
+}
+
+.dashboard-title {
+  font-size: var(--font-size-5xl);
+  font-weight: 700;
+  color: var(--color-gray-900);
+  margin-bottom: var(--spacing-3);
+}
+
+.dashboard-subtitle {
+  font-size: var(--font-size-xl);
+  color: var(--color-gray-600);
+}
+
+.onboarding-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--spacing-6);
+  margin-bottom: var(--spacing-8);
+}
+
+@media (max-width: 768px) {
+  .onboarding-cards {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dashboard-footer {
+  text-align: center;
+}
+
+.later-link {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-500);
+  text-decoration: none;
+  transition: color var(--transition-base);
+}
+
+.later-link:hover {
+  color: var(--color-gray-700);
+  text-decoration: underline;
+}

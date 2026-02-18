@@ -5,3 +5,5 @@ mysql-connector-python
 python-dotenv
 plotly
 pandas
+fastapi
+uvicorn

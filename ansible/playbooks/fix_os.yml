@@ -10,52 +10,153 @@
   vars:
     fix_output_dir: /tmp/audit/fix
     scripts_dir: "{{ playbook_dir }}/../../scripts/os"
+    remote_tmp: /tmp/audit
+    local_bundle_path: /tmp/audit/os_fix_bundle.tar.gz
 
   tasks:
-    - name: 조치 결과 디렉토리 생성
+    - name: 임시/결과 디렉토리 생성
       file:
-        path: "{{ fix_output_dir }}"
+        path: "{{ item }}"
         state: directory
         mode: '0755'
+      loop:
+        - "{{ remote_tmp }}"
+        - "{{ remote_tmp }}/work_os_fix"
+        - "{{ fix_output_dir }}"
 
-    - name: 조치 스크립트 목록 수집
+    - name: 로컬 번들 디렉토리 생성
       delegate_to: localhost
       become: no
-      find:
-        paths: "{{ scripts_dir }}"
-        patterns: "fix_U*.sh"
-        recurse: yes
-      register: fix_scripts
-
-    - name: 조치 스크립트 복사
-      copy:
-        src: "{{ item.path }}"
-        dest: "/tmp/audit/{{ item.path | basename }}"
+      file:
+        path: "/tmp/audit"
+        state: directory
         mode: '0755'
-      loop: "{{ fix_scripts.files }}"
+      run_once: true
 
-    - name: 조치 스크립트 실행
-      shell: "bash /tmp/audit/{{ item.path | basename }}"
-      loop: "{{ fix_scripts.files }}"
-      register: fix_results
+    - name: 조치 스크립트 번들 생성(tar.gz)
+      delegate_to: localhost
+      become: no
+      archive:
+        path: "{{ scripts_dir }}"
+        dest: "{{ local_bundle_path }}"
+        format: gz
+      run_once: true
 
-    - name: 조치 결과 JSON 저장
+    - name: 조치 스크립트 번들 복사
       copy:
-        content: "{{ item.stdout }}"
-        dest: "{{ fix_output_dir }}/{{ company }}_{{ server_id }}_{{ item.item.path | basename | replace('fix_', '') | replace('.sh', '') }}.json"
-      loop: "{{ fix_results.results }}"
-      when: item.stdout is defined and item.stdout | length > 0
+        src: "{{ local_bundle_path }}"
+        dest: "{{ remote_tmp }}/os_fix_bundle.tar.gz"
+        mode: '0644'
 
-    - name: 조치 결과 master-node로 수집
+    - name: 조치 스크립트 번들 압축 해제 (python3 우선, tar fallback)
+      shell: |
+        set -e
+        if command -v python3 >/dev/null 2>&1; then
+          python3 -c "import tarfile; tar_path='{{ remote_tmp }}/os_fix_bundle.tar.gz'; dest='{{ remote_tmp }}/work_os_fix'; tf=tarfile.open(tar_path,'r:gz'); tf.extractall(dest); tf.close(); print('extracted_ok', tar_path, '->', dest)"
+        elif command -v tar >/dev/null 2>&1; then
+          tar -xzf "{{ remote_tmp }}/os_fix_bundle.tar.gz" -C "{{ remote_tmp }}/work_os_fix"
+        else
+          echo "ERROR: need python3 or tar to extract bundle" >&2
+          exit 2
+        fi
+
+    - name: 조치 대상 item_codes 파일 복사
+      copy:
+        src: /tmp/audit/fix_item_codes.json
+        dest: "{{ remote_tmp }}/fix_item_codes.json"
+        mode: '0644'
+      ignore_errors: yes
+
+    - name: 조치 러너 스크립트 생성
+      copy:
+        dest: "{{ remote_tmp }}/run_os_fix.sh"
+        mode: '0755'
+        content: |
+          #!/bin/bash
+          set -euo pipefail
+          WORKDIR="{{ remote_tmp }}/work_os_fix"
+          OUTDIR="{{ fix_output_dir }}"
+          COMPANY="{{ company }}"
+          SERVER_ID="{{ server_id }}"
+          FILTER_FILE="{{ remote_tmp }}/fix_item_codes.json"
+
+          mkdir -p "$OUTDIR"
+          : > "{{ remote_tmp }}/os_fix_runner.log"
+          # 이전 실행 결과 제거 (stale 방지)
+          rm -f "$OUTDIR/${COMPANY}_${SERVER_ID}_fix_"*.json 2>/dev/null || true
+
+          # 조치 대상 item_codes 로드 (U-01 → U01 형태로 변환)
+          ALLOWED_CODES=""
+          if [ -f "$FILTER_FILE" ]; then
+            ALLOWED_CODES=$(python3 -c "
+          import json
+          codes = json.load(open('$FILTER_FILE'))
+          print(' '.join(c.replace('-','') for c in codes))
+          " 2>/dev/null || true)
+            echo "filter_codes=${ALLOWED_CODES}" >> "{{ remote_tmp }}/os_fix_runner.log"
+          fi
+
+          mapfile -t scripts < <(find "$WORKDIR" -type f -name 'fix_U*.sh' 2>/dev/null | sort)
+          for f in "${scripts[@]:-}"; do
+            base="$(basename "$f" .sh)"  # fix_U01
+            code="${base#fix_}"          # U01
+
+            # 필터가 있으면 대상 항목만 실행
+            if [ -n "$ALLOWED_CODES" ]; then
+              if ! echo " $ALLOWED_CODES " | grep -q " $code "; then
+                echo "skip=${code} (not in filter)" >> "{{ remote_tmp }}/os_fix_runner.log"
+                continue
+              fi
+            fi
+
+            # Match backend parser convention: ..._fix_U01.json
+            out_path="$OUTDIR/${COMPANY}_${SERVER_ID}_fix_${code}.json"
+            echo "run=${code}" >> "{{ remote_tmp }}/os_fix_runner.log"
+            if out="$(bash "$f" 2>> {{ remote_tmp }}/os_fix_runner.log || true)"; then
+              if [[ -n "${out//[[:space:]]/}" ]]; then
+                printf "%s" "$out" > "$out_path"
+              fi
+            fi
+          done
+
+    - name: 조치 러너 실행
+      shell: "bash {{ remote_tmp }}/run_os_fix.sh"
+
+    - name: 조치 결과 번들 생성(tar.gz) (python3 우선, tar fallback)
+      shell: |
+        set -e
+        OUT_TAR="{{ remote_tmp }}/os_fix_results_{{ company }}_{{ server_id }}.tar.gz"
+        if command -v python3 >/dev/null 2>&1; then
+          python3 -c "import os,tarfile; out_tar='{{ remote_tmp }}/os_fix_results_{{ company }}_{{ server_id }}.tar.gz'; src_dir='{{ fix_output_dir }}'; tf=tarfile.open(out_tar,'w:gz'); [tf.add(os.path.join(src_dir,n), arcname=n) for n in sorted(os.listdir(src_dir)) if os.path.isfile(os.path.join(src_dir,n))]; tf.close(); print('tar_ok', out_tar)"
+        elif command -v tar >/dev/null 2>&1; then
+          tar -czf "$OUT_TAR" -C "{{ fix_output_dir }}" .
+        else
+          echo "ERROR: need python3 or tar to create result bundle" >&2
+          exit 2
+        fi
+
+    - name: 조치 결과 번들 수집(fetch)
       fetch:
-        src: "{{ fix_output_dir }}/{{ company }}_{{ server_id }}_{{ item.item.path | basename | replace('fix_', '') | replace('.sh', '') }}.json"
+        src: "{{ remote_tmp }}/os_fix_results_{{ company }}_{{ server_id }}.tar.gz"
         dest: "{{ fix_output_dir }}/"
         flat: yes
-      loop: "{{ fix_results.results }}"
-      when: item.stdout is defined and item.stdout | length > 0
+
+    - name: 조치 결과 번들 로컬 압축 해제
+      delegate_to: localhost
+      become: no
+      unarchive:
+        src: "{{ fix_output_dir }}/os_fix_results_{{ company }}_{{ server_id }}.tar.gz"
+        dest: "{{ fix_output_dir }}/"
+        remote_src: no
 
     - name: 임시 스크립트 정리
       file:
-        path: "/tmp/audit/{{ item.path | basename }}"
+        path: "{{ item }}"
         state: absent
-      loop: "{{ fix_scripts.files }}"
+      loop:
+        - "{{ remote_tmp }}/os_fix_bundle.tar.gz"
+        - "{{ remote_tmp }}/run_os_fix.sh"
+        - "{{ remote_tmp }}/fix_item_codes.json"
+        - "{{ remote_tmp }}/os_fix_results_{{ company }}_{{ server_id }}.tar.gz"
+        - "{{ remote_tmp }}/os_fix_runner.log"
+        - "{{ remote_tmp }}/work_os_fix"

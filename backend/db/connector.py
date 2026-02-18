@@ -50,6 +50,10 @@ class DBConnector:
         query = """
             INSERT INTO scan_history (server_id, item_code, status, raw_evidence, scan_date)
             VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                status = VALUES(status),
+                raw_evidence = VALUES(raw_evidence),
+                scan_date = VALUES(scan_date)
         """
         return self._execute(query, (server_id, item_code, status, raw_evidence, scan_date))
 
@@ -83,16 +87,23 @@ class DBConnector:
     # =========================================================
     def insert_remediation_log(self, server_id, item_code, action_date, is_success, raw_evidence, failure_reason=None):
         """
-        failure_reason 컬럼이 있는 최신 스키마를 우선 사용하고,
-        구버전 스키마(컬럼 없음)인 경우 자동으로 fallback INSERT를 수행한다.
+        UNIQUE(server_id, item_code, action_date) 기반 중복 방지.
+        같은 (서버, 항목, 시간)에 대해 재실행 시 UPDATE로 덮어쓴다.
         """
         query_with_reason = """
             INSERT INTO remediation_logs (server_id, item_code, action_date, is_success, failure_reason, raw_evidence)
             VALUES (%s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                is_success = VALUES(is_success),
+                failure_reason = VALUES(failure_reason),
+                raw_evidence = VALUES(raw_evidence)
         """
         query_legacy = """
             INSERT INTO remediation_logs (server_id, item_code, action_date, is_success, raw_evidence)
             VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                is_success = VALUES(is_success),
+                raw_evidence = VALUES(raw_evidence)
         """
         try:
             cursor = self.connection.cursor()
