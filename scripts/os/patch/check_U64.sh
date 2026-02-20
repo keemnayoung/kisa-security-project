@@ -83,14 +83,14 @@ else
   STATUS="PASS"; FAIL_CAUSE="NONE"
 fi
 
-# DETAIL_CONTENT (현재 설정/상태값만)
+# DETAIL_CONTENT 구성
 DETAIL_CONTENT="os_name=${OS_NAME} os_id=${OS_ID} os_version=${OS_VERSION}"$'\n'
 DETAIL_CONTENT+="kernel_running=${KERNEL_RUNNING:-unknown}"$'\n'
 DETAIL_CONTENT+="eol_status=${EOL_STATUS}"$'\n'
 DETAIL_CONTENT+="pkg_mgr=${PKG_MGR} updates_exist=${UPDATES_EXIST} security_updates_exist=${SEC_UPDATES_EXIST}"$'\n'
 DETAIL_CONTENT+="kernel_latest_installed=${KERNEL_LATEST_INSTALLED:-unknown} kernel_need_reboot=${KERNEL_NEED_REBOOT}"
 
-# detail 첫 문장(단일 문장) 구성
+# reason 구성
 if [ "$STATUS" = "PASS" ]; then
   REASON_LINE="eol_status=${EOL_STATUS}, security_updates_exist=${SEC_UPDATES_EXIST}, updates_exist=${UPDATES_EXIST}, kernel_need_reboot=${KERNEL_NEED_REBOOT}로 확인되어 이 항목에 대해 양호합니다."
 else
@@ -113,11 +113,11 @@ else
   esac
 fi
 
-# guide 구성(문장별 줄바꿈)
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="이 항목에 대해서 패치 적용 과정에서 서비스 중단, 의존성 변경, 커널 업데이트 후 재부팅이 발생할 수 있는 위험이 존재하여 수동 조치가 필요합니다.
 관리자가 직접 확인 후 서비스 영향도를 검토하고 점검 창을 확보한 뒤 벤더 권고 보안 패치를 적용하며 EOL인 경우 상위 OS 버전으로 업그레이드하고 커널 업데이트 적용을 위해 재부팅까지 수행해 주시기 바랍니다."
 
-# raw_evidence 생성
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

@@ -84,7 +84,7 @@ usermod -s /sbin/nologin ftp 명령을 우선 적용하고, 미존재 시 /usr/s
 쉘 변경은 ftp 계정을 참조하는 운영/자동화 작업에 영향을 줄 수 있으므로, 변경 전 서비스 연동 여부를 확인하고 유지보수 창에 적용하는 것이 안전합니다.
 EOF
 )
-# raw_evidence 구성 (문장 단위 줄바꿈 유지)
+# raw_evidence 구성
 DETAIL_LINE=""
 if [ "$STATUS" = "PASS" ]; then
   DETAIL_LINE="$REASON_LINE"

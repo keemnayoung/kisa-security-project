@@ -27,7 +27,7 @@ DETAIL_CONTENT=""
 REASON_LINE=""
 GUIDE_LINE=""
 
-# 권한 판정(400 이하) 함수: 3자리 0-padding 후 u(4/0), g(0), o(0)만 허용
+# 권한 판정(400 이하) 함수: 3자리 u(4/0), g(0), o(0)만 허용
 is_perm_ok() {
   local perm_raw="$1"
   [ -z "$perm_raw" ] && return 1
@@ -37,7 +37,7 @@ is_perm_ok() {
   { [ "$u" = "4" ] || [ "$u" = "0" ]; } && [ "$g" = "0" ] && [ "$o" = "0" ]
 }
 
-# 1) 파일 존재 여부 분기
+# 파일 존재 여부
 if [ ! -f "$TARGET_FILE" ]; then
   STATUS="FAIL"
   REASON_LINE="파일이 존재하지 않아 이 항목에 대해 취약합니다."
@@ -47,7 +47,7 @@ if [ ! -f "$TARGET_FILE" ]; then
   주의사항: 
   권한/소유자 설정이 잘못되면 인증 관련 서비스에서 로그인 오류가 발생할 수 있으므로 조치 후 즉시 상태를 재확인해야 합니다."
 else
-  # 2) stat 정보 수집 및 실패 방어
+  # stat 정보 수집 및 실패 방어
   FILE_OWNER="$(stat -c "%U" "$TARGET_FILE" 2>/dev/null)"
   FILE_PERM_RAW="$(stat -c "%a" "$TARGET_FILE" 2>/dev/null)"
 
@@ -60,16 +60,15 @@ else
     주의사항: 
     권한/소유자 설정이 잘못되면 인증 관련 서비스에서 로그인 오류가 발생할 수 있으므로 조치 전후로 상태 수집(stat)이 가능한지부터 확인해야 합니다."
   else
-    # 3) 권한 정규화 및 판정
+    # 권한 정규화 및 판정
     FILE_PERM="$(printf "%03d" "$FILE_PERM_RAW" 2>/dev/null)"
 
     PERM_OK=0
     if is_perm_ok "$FILE_PERM_RAW"; then PERM_OK=1; fi
 
-    # 4) DETAIL_CONTENT는 양호/취약 관계없이 현재 설정값 전체 표시
     DETAIL_CONTENT="owner=$FILE_OWNER\nperm=$FILE_PERM"
 
-    # 5) 기준 충족 여부 분기(양호/취약 문장 1문장, 설정값 기반)
+    # 기준 충족 여부
     if [ "$FILE_OWNER" = "root" ] && [ "$PERM_OK" -eq 1 ]; then
       STATUS="PASS"
       REASON_LINE="owner=$FILE_OWNER, perm=$FILE_PERM로 설정되어 있어 이 항목에 대해 양호합니다."
@@ -92,7 +91,7 @@ else
   fi
 fi
 
-# raw_evidence 구성: 문장/항목을 줄바꿈으로 구분(대시보드에서 줄바꿈 유지 목적)
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

@@ -72,13 +72,13 @@ DETAIL_CONTENT=""
 # 자동 조치 시 운영 권한 회수로 인한 서비스 장애 위험과 수동 조치 방법 정의
 GUIDE_LINE="이 항목에 대해서 관리자 권한을 자동으로 회수할 경우, 해당 계정으로 수행되던 정기 백업, 모니터링, 데이터 이관 등 필수 관리 작업이 즉시 중단되어 시스템 운영에 심각한 장애가 발생할 수 있는 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 확인 후 불필요한 관리자 권한을 가진 계정에 대해 ALTER ROLE <계정명> NOSUPERUSER; 명령을 사용하여 권한을 회수하거나 꼭 필요한 권한만 부여하도록 조치해 주시기 바랍니다."
 
-# 쿼리 실행 결과에 따른 점검 수행 분기점
+# 쿼리 실행 결과에 따른 점검 수행
 if [ $RC -ne 0 ]; then
   STATUS="FAIL"
   REASON_LINE="데이터베이스 관리자 권한 목록을 조회할 수 없어 점검을 수행하지 못했습니다."
   DETAIL_CONTENT="connection_error(database_access=FAILED)"
 else
-  # 비인가 관리자 계정 존재 여부에 따른 결과 판단 분기점
+  # 비인가 관리자 계정 존재 여부에 따른 결과 판단
   if [ -z "$EXTRA_ADMINS" ]; then
     STATUS="PASS"
     REASON_LINE="허용된 계정들만 관리자 권한(SUPERUSER)을 보유하고 있어 이 항목에 대해 양호합니다."
@@ -96,7 +96,7 @@ fi
 CHECK_COMMAND="SELECT rolname FROM pg_roles WHERE rolsuper = true;"
 TARGET_FILE="pg_roles"
 
-# 요구사항 반영한 RAW_EVIDENCE 구조화
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -107,9 +107,10 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# 최종 이스케이프 및 출력
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

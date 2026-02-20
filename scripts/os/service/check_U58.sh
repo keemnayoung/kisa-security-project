@@ -52,7 +52,7 @@ append_reason() {
   VULN_REASON="${VULN_REASON}${VULN_REASON:+, }${_r}"
 }
 
-# 분기: systemd 상태 수집(서비스 단위가 있을 때 active/enabled 기반 판단)
+# systemd 상태 수집(서비스 단위가 있을 때 active/enabled 기반 판단)
 for u in "${UNITS[@]}"; do
   a="$(systemctl is-active "$u" 2>/dev/null || echo "unknown")"
   e="$(systemctl is-enabled "$u" 2>/dev/null || echo "unknown")"
@@ -62,7 +62,7 @@ for u in "${UNITS[@]}"; do
   [ "$e" = "enabled" ] && ENABLED_HIT=1 && append_reason "${u}.service enabled"
 done
 
-# 분기: 프로세스 확인(서비스가 아니어도 떠 있을 수 있어 보조 판단)
+# 프로세스 확인(서비스가 아니어도 떠 있을 수 있어 보조 판단)
 for p in "${PROCS[@]}"; do
   if pgrep -x "$p" >/dev/null 2>&1; then
     PROC_HIT=1
@@ -79,7 +79,7 @@ SNMPTRAPD_BIN="$(command -v snmptrapd 2>/dev/null || true)"
 [ -n "$SNMPD_BIN" ] && TARGET_FILE="$SNMPD_BIN"
 append_line "[binary] snmpd_path=${SNMPD_BIN:-NOT_FOUND}, snmptrapd_path=${SNMPTRAPD_BIN:-NOT_FOUND}"
 
-# 분기: 최종 판정 및 detail/guide 구성
+# 최종 판정 및 detail/guide 구성
 if [ $ACTIVE_HIT -eq 1 ] || [ $ENABLED_HIT -eq 1 ] || [ $PROC_HIT -eq 1 ]; then
   STATUS="FAIL"
   [ -z "$VULN_REASON" ] && VULN_REASON="snmpd/snmptrapd 상태가 활성로 확인"
@@ -94,12 +94,12 @@ systemd에서 snmpd/snmptrapd를 중지(stop)하고 비활성화(disable)한 뒤
 주의사항: 
 SNMP를 통해 모니터링/알림(trap)을 사용하는 환경에서는 중지 시 모니터링 공백이 발생할 수 있으므로 운영/관제 연동 여부를 확인한 뒤 적용해야 합니다.'
 
-# 유틸: JSON escape (백슬래시/따옴표/줄바꿈)
+# JSON escape (백슬래시/따옴표/줄바꿈)
 json_escape() {
   echo "$1" | sed 's/\\/\\\\/g; s/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g'
 }
 
-# raw_evidence 구성(detail: 첫 줄 문장 + 다음 줄부터 상세 설정값)
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$(json_escape "$COMMAND_DISPLAY")",

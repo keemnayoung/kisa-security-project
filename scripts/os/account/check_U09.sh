@@ -27,6 +27,7 @@ PASSWD_FILE="/etc/passwd"
 GSHADOW_FILE="/etc/gshadow"
 TARGET_FILE="$GROUP_FILE $PASSWD_FILE $GSHADOW_FILE"
 
+# 점검 명령
 CHECK_COMMAND='[ -f /etc/group ] && [ -f /etc/passwd ] && [ -f /etc/gshadow ] && (echo "[unused_groups_gid_1000_plus]"; awk -F: '\''NR==FNR{u[$4]=1;next}{gid=$3;gm=$4;gname=$1;if(gid~/^[0-9]+$/&&gid>=1000){if(!u[gid]&&gm=="")print gname":"gid}}'\'' /etc/passwd /etc/group; echo "[mismatch_group_vs_gshadow]"; (cut -d: -f1 /etc/group | sed "/^$/d" | while read -r g; do grep -q "^${g}:" /etc/gshadow || echo "group_only:$g"; done); (cut -d: -f1 /etc/gshadow | sed "/^$/d" | while read -r g; do grep -q "^${g}:" /etc/group || echo "gshadow_only:$g"; done); echo "[ghost_members_in_group]"; awk -F: '\''NR==FNR{p[$1]=1;next}{if($4!=""){split($4,a,",");for(i in a){gsub(/^[ \t]+|[ \t]+$/,"",a[i]);if(a[i]!="" && !(a[i] in p))print $1":"a[i]}}'\'' /etc/passwd /etc/group ) || echo "group_or_passwd_or_gshadow_not_found"'
 
 REASON_LINE=""
@@ -46,7 +47,7 @@ json_escape() {
 
 # 파일 존재 여부 분기
 if [ -f "$GROUP_FILE" ] && [ -f "$PASSWD_FILE" ] && [ -f "$GSHADOW_FILE" ]; then
-  # /etc/group과 /etc/gshadow 간 그룹명 불일치 여부를 수집합니다.
+  # /etc/group과 /etc/gshadow 간 그룹명 불일치 여부를 수집
   while IFS=: read -r GNAME _; do
     [ -z "$GNAME" ] && continue
     if ! grep -qE "^${GNAME}:" "$GSHADOW_FILE" 2>/dev/null; then
@@ -61,8 +62,8 @@ if [ -f "$GROUP_FILE" ] && [ -f "$PASSWD_FILE" ] && [ -f "$GSHADOW_FILE" ]; then
     fi
   done < "$GSHADOW_FILE"
 
-  # /etc/group 멤버 목록에 존재하지 않는 계정이 포함되어 있는지(유령 멤버) 확인합니다.
-  # 동시에 GID 1000 이상에서 유휴 그룹(멤버 없음 + primary 사용자 없음)을 수집합니다.
+  # /etc/group 멤버 목록에 존재하지 않는 계정이 포함되어 있는지(유령 멤버) 확인
+  # 동시에 GID 1000 이상에서 유휴 그룹(멤버 없음 + primary 사용자 없음)을 수집
   while IFS=: read -r GNAME GPASS GID GMEM; do
     [ -z "$GNAME" ] && continue
 
@@ -94,7 +95,7 @@ if [ -f "$GROUP_FILE" ] && [ -f "$PASSWD_FILE" ] && [ -f "$GSHADOW_FILE" ]; then
   if [ ${#MISMATCH_GROUPS[@]} -gt 0 ] || [ ${#GHOST_MEMBERS[@]} -gt 0 ] || [ ${#UNUSED_GROUPS[@]} -gt 0 ]; then
     STATUS="FAIL"
 
-    # 취약 시: "어떠한 이유"는 취약한 설정값만으로 구성합니다.
+    # 취약
     VULN_REASON_PARTS=()
     [ ${#MISMATCH_GROUPS[@]} -gt 0 ] && VULN_REASON_PARTS+=("mismatch_group_vs_gshadow=$(printf "%s," "${MISMATCH_GROUPS[@]}" | sed 's/,$//')")
     [ ${#GHOST_MEMBERS[@]} -gt 0 ] && VULN_REASON_PARTS+=("ghost_members_in_group=$(printf "%s," "${GHOST_MEMBERS[@]}" | sed 's/,$//')")
@@ -102,7 +103,7 @@ if [ -f "$GROUP_FILE" ] && [ -f "$PASSWD_FILE" ] && [ -f "$GSHADOW_FILE" ]; then
 
     REASON_LINE="$(IFS='; '; echo "${VULN_REASON_PARTS[*]}")로 이 항목에 대해 취약합니다."
 
-    # DETAIL_CONTENT는 양호/취약과 관계 없이 현재 설정값(현재 수집 결과)만 표시합니다.
+    #DETAIL_CONTENT 구성
     DETAIL_CONTENT=""
     if [ ${#MISMATCH_GROUPS[@]} -gt 0 ]; then
       DETAIL_CONTENT="${DETAIL_CONTENT}mismatch_group_vs_gshadow:\n$(printf "%s\n" "${MISMATCH_GROUPS[@]}")\n"
@@ -122,13 +123,13 @@ if [ -f "$GROUP_FILE" ] && [ -f "$PASSWD_FILE" ] && [ -f "$GSHADOW_FILE" ]; then
       DETAIL_CONTENT="${DETAIL_CONTENT}unused_groups_gid_1000_plus:\nnone"
     fi
 
-    # 수동 조치 필요 안내(자동 조치 시 위험 + 조치 방법)
+    # 자동조치 위험 + 조치 방법
     GUIDE_LINE="계정/그룹 정합성을 자동으로 변경하면 파일/디렉터리 소유권, ACL, 서비스 계정 정책, LDAP/SSSD 연동 구성에 영향을 줄 수 있어 위험이 존재하여 수동 조치가 필요합니다. 관리자가 직접 확인 후 불일치 그룹(/etc/group↔/etc/gshadow) 정리, 존재하지 않는 계정의 그룹 멤버 제거, 사용되지 않는 그룹 삭제 여부를 검토하여 조치해 주시기 바랍니다."
 
   else
     STATUS="PASS"
 
-    # 양호 시: "어떠한 이유"는 양호를 설명할 수 있는 현재 설정값 요약으로 구성합니다.
+    # 양호
     REASON_LINE="mismatch_group_vs_gshadow=none; ghost_members_in_group=none; unused_groups_gid_1000_plus=none로 이 항목에 대해 양호합니다."
 
     DETAIL_CONTENT="mismatch_group_vs_gshadow:\nnone\nghost_members_in_group:\nnone\nunused_groups_gid_1000_plus:\nnone"
@@ -139,7 +140,7 @@ if [ -f "$GROUP_FILE" ] && [ -f "$PASSWD_FILE" ] && [ -f "$GSHADOW_FILE" ]; then
 else
   STATUS="FAIL"
 
-  # 파일 누락 시 취약 이유(설정값 기반으로만 구성)
+  # 파일 누락 시 취약
   MISSING=()
   [ ! -f "$GROUP_FILE" ] && MISSING+=("group_file_missing:/etc/group")
   [ ! -f "$PASSWD_FILE" ] && MISSING+=("passwd_file_missing:/etc/passwd")

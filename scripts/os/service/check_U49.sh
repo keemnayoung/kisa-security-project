@@ -32,7 +32,8 @@ CHECK_COMMAND='systemctl is-active named; systemctl is-active named-chroot; syst
 FOUND_ANY=0
 DETAIL_LINES=""
 
-append_detail() {
+ # DETAIL_LINES 누적 저장
+append_detail() { 
   local line="$1"
   [ -z "$line" ] && return 0
   if [ -z "$DETAIL_LINES" ]; then
@@ -42,15 +43,18 @@ append_detail() {
   fi
 }
 
-json_escape() {
+# JSON escape 처리 (따옴표, 줄바꿈)
+json_escape() { 
   echo "$1" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g'
 }
 
-extract_ver() {
+# 입력 문자열에서 x.y.z 형태의 버전만 추출해 첫 번째 값으로 반환하는 함수
+extract_ver() {  
   echo "$1" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1
 }
 
-ver_is_ge() {
+# 현재 버전이 기준 버전 이상이면 0, 미만이면 1, 파싱 실패면 2 반환 함수
+ver_is_ge() {  
   local cur_raw="$1" req_raw="$2"
   local cur req first
   cur="$(extract_ver "$cur_raw")"
@@ -67,7 +71,8 @@ ver_is_ge() {
   fi
 }
 
-# 분기 1: DNS 서비스 활성(실행) 여부와 활성 유닛 식별
+
+# DNS 서비스 활성(실행) 여부와 활성 유닛 식별
 DNS_ACTIVE="N"
 ACTIVE_UNIT="none"
 if systemctl is-active --quiet named 2>/dev/null; then
@@ -81,7 +86,7 @@ fi
 UNIT_FILE_HIT="N"
 systemctl list-unit-files 2>/dev/null | grep -qE '^(named|named-chroot)\.service' && UNIT_FILE_HIT="Y"
 
-# 분기 2: named 바이너리/버전/패키지 정보 수집(설치 여부 판단 포함)
+# named 바이너리/버전/패키지 정보 수집(설치 여부 판단 포함)
 DNS_VER_RAW=""
 NAMED_PATH=""
 BIND_RPM=""
@@ -105,7 +110,7 @@ else
   append_detail "[bind] named_command=NOT_FOUND"
 fi
 
-# 분기 3: 최신 패치 관리 여부 확인(업데이트 대기 유무)
+# 최신 패치 관리 여부 확인(업데이트 대기 유무)
 UPDATE_PENDING="unknown"
 UPDATE_LINES=""
 
@@ -136,7 +141,7 @@ if [ $FOUND_ANY -eq 1 ]; then
   [ -n "$UPDATE_LINES" ] && append_detail "[patch] check_update_head=$(echo "$UPDATE_LINES" | tr '\n' ';' | sed 's/[[:space:]]\+/ /g' | sed 's/;/ | /g')"
 fi
 
-# 분기 4: 최종 판정(양호/취약) 및 RAW_EVIDENCE의 이유 문장 구성
+# 최종 판정(양호/취약) 및 RAW_EVIDENCE의 REASON 문장 구성
 REASON_SETTING=""
 if [ "$DNS_ACTIVE" = "N" ] && [ $FOUND_ANY -eq 0 ]; then
   STATUS="PASS"
@@ -179,16 +184,18 @@ else
   fi
 fi
 
-# 분기 5: detail/guide 문자열(줄바꿈 유지)을 최종 RAW_EVIDENCE에 반영
+
 if [ "$STATUS" = "PASS" ]; then
   REASON_LINE="${REASON_SETTING}로 이 항목에 대해 양호합니다."
 else
   REASON_LINE="${REASON_SETTING}로 이 항목에 대해 취약합니다."
 fi
 
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="이 항목에 대해서 DNS 서비스 운영 환경별 영향 차이로 자동 조치 시 서비스 중단, 질의 실패, 연동 시스템 장애가 발생할 수 있는 위험이 존재하여 수동 조치가 필요합니다.
 관리자가 직접 확인 후 bind 패키지 최신 보안 업데이트 적용 여부를 점검하고 필요 시 업데이트를 적용하며, DNS 서비스를 사용 중이면 ${ACTIVE_UNIT} 재시작 또는 미사용이면 서비스 중지/비활성화를 조치해 주시기 바랍니다."
 
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -202,6 +209,7 @@ EOF
 
 RAW_EVIDENCE_ESCAPED="$(json_escape "$RAW_EVIDENCE")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

@@ -15,7 +15,7 @@
 # @Reference   : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 및 환경 설정 분기점
+# 기본 변수
 ID="U-27"
 ACTION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 IS_SUCCESS=0
@@ -31,7 +31,7 @@ FOUND=0
 
 CHECK_COMMAND="( [ -f /etc/hosts.equiv ] && stat -c '%U %G %a %n' /etc/hosts.equiv && grep -nE '^[[:space:]]*\\+' /etc/hosts.equiv 2>/dev/null ) ; find /home -name .rhosts -type f -print -exec stat -c '%U %G %a %n' {} \\; -exec grep -nE '^[[:space:]]*\\+' {} \\; 2>/dev/null"
 
-# 시스템 내의 대상 파일(/etc/hosts.equiv 및 각 사용자 홈 디렉토리의 .rhosts)을 수집하는 분기점
+# 시스템 내의 대상 파일(/etc/hosts.equiv 및 각 사용자 홈 디렉토리의 .rhosts)을 수집
 TARGET_LIST=()
 
 if [ -f "/etc/hosts.equiv" ]; then
@@ -48,7 +48,7 @@ fi
 
 TARGET_FILE=$(printf "%s\n" "${TARGET_LIST[@]}")
 
-# 수집된 파일들에 대해 소유자 변경, 권한 축소(600), 설정 내 '+' 문자 제거를 수행하는 분기점
+# 수집된 파일들에 대해 소유자 변경, 권한 축소(600), 설정 내 '+' 문자 제거를 수행
 if [ "$FOUND" -eq 1 ]; then
   for file in "${TARGET_LIST[@]}"; do
     [ -f "$file" ] || continue
@@ -72,7 +72,7 @@ if [ "$FOUND" -eq 1 ]; then
   done
 fi
 
-# 조치 후 각 파일의 최종 상태를 확인하고 상세 내용을 구성하는 분기점
+# 조치 후 각 파일의 최종 상태를 확인하고 상세 내용 구성
 DETAIL_ITEMS=()
 
 if [ "$FOUND" -eq 0 ]; then
@@ -96,7 +96,7 @@ perm=$AFTER_PERM
 plus_setting=$( [ -n "$PLUS_AFTER" ] && echo "found($PLUS_AFTER)" || echo "not_found" )
 ")
 
-    # 가이드 기준 준수 여부 최종 검증 분기점
+    # 가이드 기준 준수 여부 최종 검증
     if [ "$file" = "/etc/hosts.equiv" ]; then
       [ "$AFTER_OWNER" != "root" ] && FAIL_FLAG=1
     else
@@ -116,7 +116,7 @@ plus_setting=$( [ -n "$PLUS_AFTER" ] && echo "found($PLUS_AFTER)" || echo "not_f
   # DETAIL_CONTENT 줄바꿈 조립
   DETAIL_CONTENT=$(printf "%s\n" "${DETAIL_ITEMS[@]}")
 
-  # 조치 성공 및 실패에 따른 REASON_LINE 확정 분기점
+  # 조치 성공 및 실패에 따른 REASON_LINE 확정
   if [ "$FAIL_FLAG" -eq 0 ]; then
     IS_SUCCESS=1
     REASON_LINE="소유자를 해당 계정으로 변경하고 권한을 600 이하로 설정하며 '+' 설정을 제거하여 조치를 완료하여 이 항목에 대해 양호합니다."
@@ -126,7 +126,7 @@ plus_setting=$( [ -n "$PLUS_AFTER" ] && echo "found($PLUS_AFTER)" || echo "not_f
   fi
 fi
 
-# JSON 출력을 위한 데이터 구조화 및 이스케이프 분기점
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -136,11 +136,12 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 결과 JSON 출력 분기점
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

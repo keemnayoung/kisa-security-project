@@ -28,6 +28,7 @@ TARGET_FILE="/etc/inetd.conf
 /etc/xinetd.d/(echo|discard|daytime|chargen)
 systemd(echo|discard|daytime|chargen 및 -dgram/-stream 변형 unit)"
 
+# 점검 명령
 CHECK_COMMAND='
 [ -f /etc/inetd.conf ] && grep -nEv "^[[:space:]]*#" /etc/inetd.conf 2>/dev/null | egrep -n "^[[:space:]]*(echo|discard|daytime|chargen)([[:space:]]|$)" || echo "inetd_conf_not_found_or_no_active";
 for f in /etc/xinetd.d/echo /etc/xinetd.d/discard /etc/xinetd.d/daytime /etc/xinetd.d/chargen; do
@@ -147,7 +148,7 @@ if [ -n "$SYSTEMD_FOUND" ]; then
   add_found "systemd:${SYSTEMD_FOUND% }"
 fi
 
-# reason(설정값 기반) + guide(자동조치 가정) 구성
+# reason 구성
 if [ "$STATUS" = "PASS" ]; then
   REASON_LINE="inetd에서 echo/discard/daytime/chargen 활성 라인이 없고 xinetd에서 disable=no가 없으며 systemd에서 관련 unit이 active/enabled가 아니라 이 항목에 대해 양호합니다."
 else
@@ -156,12 +157,13 @@ else
   REASON_LINE="${VULN_CAUSE} 설정이 확인되어 이 항목에 대해 취약합니다."
 fi
 
+# 취약 가정 자동 조치
 GUIDE_LINE="자동 조치:
 inetd는 /etc/inetd.conf에서 echo/discard/daytime/chargen 활성 라인을 주석 처리하고, xinetd는 /etc/xinetd.d/* 파일의 disable=no를 disable=yes로 변경하며, systemd는 관련 socket/service를 stop 후 disable 및 mask 처리합니다.
 주의사항: 
 미사용 서비스만 대상으로 해야 하며, 시간대별/운영 중 서비스 의존성이 있는 환경에서는 xinetd/inetd 재시작 또는 systemd unit 비활성화로 예상치 못한 서비스 영향이 발생할 수 있으므로 적용 전 점검 및 적용 후 즉시 검증이 필요합니다."
 
-# RAW_EVIDENCE 생성 (줄바꿈은 실제 \n로 들어가고, 최종 JSON에는 \\n으로 escape)
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -172,8 +174,10 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(json_escape "$RAW_EVIDENCE")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

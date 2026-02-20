@@ -59,7 +59,7 @@ mask_token() {
   fi
 }
 
-# - 취약: public/private 또는 (길이<8) 또는 (영문+숫자만이고 길이<10)
+# public/private 또는 (길이<8) 또는 (영문+숫자만이고 길이<10)
 is_weak_token() {
   local s="${1:-}" low
   low="$(echo "$s" | tr '[:upper:]' '[:lower:]')"
@@ -74,7 +74,7 @@ set_weak_reason_once() {
   WEAK_REASON="$1"
 }
 
-# 분기: SNMP 실행 여부 판단
+# SNMP 실행 여부 판단
 SNMP_RUNNING=0
 ACTIVE="N"; ENABLED="N"; PROC="N"
 
@@ -87,7 +87,7 @@ pgrep -x snmpd >/dev/null 2>&1 && PROC="Y" && SNMP_RUNNING=1
 append_detail "[systemd] snmpd_active=$ACTIVE snmpd_enabled=$ENABLED"
 append_detail "[process] snmpd_running=$PROC"
 
-# 분기: SNMP 미실행(점검 대상 없음)
+# SNMP 미실행(점검 대상 없음)
 if [ "$SNMP_RUNNING" -eq 0 ]; then
   STATUS="PASS"
   REASON_LINE="snmpd_active=$ACTIVE snmpd_running=$PROC 로 이 항목에 대해 양호합니다."
@@ -95,7 +95,7 @@ if [ "$SNMP_RUNNING" -eq 0 ]; then
   DETAIL_CONTENT="$DETAIL_LINES"
   [ -z "$DETAIL_CONTENT" ] && DETAIL_CONTENT="none"
 else
-  # 분기: 설정 파일에서 v1/v2c community 및 v3 createUser 파싱
+  # 설정 파일에서 v1/v2c community 및 v3 createUser 파싱
   CONF_LIST="/etc/snmp/snmpd.conf /usr/share/snmp/snmpd.conf /var/lib/net-snmp/snmpd.conf"
   FOUND_ANY_CONF=0
   FOUND_V12=0
@@ -172,7 +172,7 @@ else
     fi
   done
 
-  # 분기: 최종 판정
+  # 최종 판정
   if [ "$FOUND_ANY_CONF" -eq 0 ]; then
     STATUS="FAIL"
     REASON_LINE="snmpd_active=$ACTIVE snmpd_running=$PROC snmp_conf=NOT_FOUND 로 이 항목에 대해 취약합니다."
@@ -192,7 +192,7 @@ else
   [ -z "$DETAIL_CONTENT" ] && DETAIL_CONTENT="none"
 fi
 
-# 분기: 최종 RAW_EVIDENCE(detail/guide) 구성
+# 최종 RAW_EVIDENCE(detail/guide) 구성
 if [ "$STATUS" = "PASS" ]; then
   DETAIL_LINE="${REASON_LINE}"$'\n'"${DETAIL_CONTENT}"
 else

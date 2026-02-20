@@ -29,7 +29,7 @@ VULN_LINES=""
 ALL_LINES=""
 TOTAL_FILES=0
 
-# JSON escape (개행을 \n 으로 유지)
+# JSON escape 처리 (따옴표, 줄바꿈)
 json_escape() {
   echo "$1" | sed 's/\\/\\\\/g; s/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g'
 }
@@ -68,7 +68,7 @@ else
   fi
 fi
 
-# DETAIL_CONTENT는 양호/취약과 무관하게 "현재 설정 값들"을 보여줌 (너무 길어지는 것을 방지해 일부만 표시)
+# DETAIL_CONTENT는 구성
 if [ "$TOTAL_FILES" -gt 0 ]; then
   SHOW_LIMIT=50
   SHOWN_LINES="$(printf "%b" "$ALL_LINES" | sed '/^[[:space:]]*$/d' | head -n "$SHOW_LIMIT")"
@@ -83,7 +83,7 @@ else
   DETAIL_CONTENT="$(printf "%b" "$ALL_LINES" | sed 's/[[:space:]]*$//')"
 fi
 
-# 상태에 따른 reason 문구 구성 (가이드 말 없이 설정 값만 사용)
+# 상태에 따른 reason 구성
 if [ -n "$VULN_LINES" ]; then
   STATUS="FAIL"
   FIRST_VULN="$(printf "%b" "$VULN_LINES" | sed '/^[[:space:]]*$/d' | head -n 1)"
@@ -92,13 +92,13 @@ else
   REASON_LINE="/var/log 내 로그 파일이 owner=root, perm<=644 로 설정되어 있어 이 항목에 대해 양호합니다."
 fi
 
-# guide 문구 (자동 조치 위험 + 관리자가 직접 조치 방법 명시)
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="이 항목에 대해서 로그 파일의 소유자/권한 변경으로 일부 애플리케이션 또는 로그 수집 에이전트의 기록·수집이 실패할 수 있는 위험이 존재하여 수동 조치가 필요합니다.
 관리자가 직접 확인 후 /var/log 내 로그 파일의 소유자를 root로 변경하고 권한을 644 이하로 설정해 주시기 바랍니다.
 예) chown root /var/log/<파일 이름>
 예) chmod 644 /var/log/<파일 이름>"
 
-# raw_evidence (각 값은 문장/항목을 줄바꿈으로 구분)
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -110,8 +110,10 @@ $DETAIL_CONTENT",
 EOF
 )
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(json_escape "$RAW_EVIDENCE")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

@@ -88,11 +88,10 @@ check_file "/etc/xinetd.conf"
 check_directory_files "/etc/xinetd.d"
 check_directory_files "/etc/systemd"
 
-# DETAIL_CONTENT는 양호/취약과 관계 없이 현재 설정값 전체를 출력
 DETAIL_CONTENT="$(printf "%s" "$ALL_LINES" | sed 's/[[:space:]]*$//')"
 [ -n "$DETAIL_CONTENT" ] || DETAIL_CONTENT="no_data"
 
-# 분기: 양호/취약에 따라 REASON_LINE(1문장) 및 GUIDE_LINE 구성
+# 양호/취약에 따라 REASON_LINE 및 GUIDE_LINE 구성
 if [ "$STATUS" = "PASS" ]; then
   REASON_LINE="모든 대상 파일이 owner=root이고 perm이 600 이하로 설정되어 있어 이 항목에 대해 양호합니다."
 else
@@ -100,16 +99,16 @@ else
   VULN_ONE_LINE="$(printf "%s" "$VULN_LINES" | sed 's/[[:space:]]*$//' | tr '\n' ',' | sed 's/,$//; s/,/, /g')"
   [ -n "$VULN_ONE_LINE" ] || VULN_ONE_LINE="vulnerable_settings_not_collected"
   REASON_LINE="$VULN_ONE_LINE 로 설정되어 있어 이 항목에 대해 취약합니다."
-
-  # 취약 가정 자동 조치 + 주의사항(문장별 줄바꿈)
-  GUIDE_LINE="자동 조치:
-  /etc/inetd.conf, /etc/xinetd.conf, /etc/systemd/system.conf 및 /etc/xinetd.d/*, /etc/systemd/* 파일에 대해 소유자/그룹을 root:root로 변경하고 권한을 600으로 적용합니다.
-  조치 후 systemctl daemon-reload를 수행하여 설정 반영을 확인합니다(서비스 환경에 따라 재시작이 필요할 수 있습니다).
-  주의사항: 
-  일부 환경에서 systemd 설정 파일 권한을 600으로 변경하면 비root 계정으로 설정 조회/진단 도구 사용에 제한이 생길 수 있어 운영 절차에 영향을 줄 수 있습니다."
 fi
 
-# raw_evidence 구성: 첫 줄(REASON_LINE 1문장) + 다음 줄부터(DETAIL_CONTENT 전체)
+# 취약 가정 자동 조치
+GUIDE_LINE="자동 조치:
+/etc/inetd.conf, /etc/xinetd.conf, /etc/systemd/system.conf 및 /etc/xinetd.d/*, /etc/systemd/* 파일에 대해 소유자/그룹을 root:root로 변경하고 권한을 600으로 적용합니다.
+조치 후 systemctl daemon-reload를 수행하여 설정 반영을 확인합니다(서비스 환경에 따라 재시작이 필요할 수 있습니다).
+주의사항: 
+일부 환경에서 systemd 설정 파일 권한을 600으로 변경하면 비root 계정으로 설정 조회/진단 도구 사용에 제한이 생길 수 있어 운영 절차에 영향을 줄 수 있습니다."
+
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

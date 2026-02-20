@@ -27,6 +27,7 @@ LOGIN_DEFS_FILE="/etc/login.defs"
 
 TARGET_FILE="/etc/profile /etc/profile.d/*.sh /etc/bashrc /etc/login.defs"
 
+# 점검 명령
 CHECK_COMMAND='
 [ -f /etc/profile ] && grep -inE "^[[:space:]]*umask[[:space:]]+[0-9]+" /etc/profile || echo "/etc/profile:not_found";
 ls -1 /etc/profile.d/*.sh 1>/dev/null 2>&1 && grep -inE "^[[:space:]]*umask[[:space:]]+[0-9]+" /etc/profile.d/*.sh || echo "/etc/profile.d/*.sh:not_found_or_no_matches";
@@ -41,6 +42,7 @@ FOUND_VULN="N"
 
 FOUND_LIST=()
 
+# UMASK 가져오는 함수
 get_umask_from_file() {
   local file="$1"
   local mode="$2"  # lower=umask, upper=UMASK
@@ -70,6 +72,7 @@ get_umask_from_file() {
   fi
 }
 
+# UMASK 양호/취약 판단 함수
 is_umask_ok() {
   local raw="$1"
   local v dec required
@@ -98,16 +101,14 @@ fi
 get_umask_from_file "$BASHRC_FILE" "lower"
 get_umask_from_file "$LOGIN_DEFS_FILE" "upper"
 
-# DETAIL_CONTENT는 양호/취약과 무관하게 현재 설정값 전체를 보여줍니다.
-# reason(한 문장)은 양호면 양호 설정만, 취약이면 취약 설정(또는 미설정 상태)만 사용합니다.
 if [ "$FOUND_ANY" = "N" ]; then
   STATUS="FAIL"
   FOUND_VULN="Y"
 
-  # 취약 이유는 “설정이 확인되지 않음” 상태(취약 요소)만으로 1문장 구성
+  # 취약 이유
   REASON_LINE="/etc/profile, /etc/profile.d/*.sh, /etc/bashrc, /etc/login.defs에서 umask/UMASK 설정이 확인되지 않아 이 항목에 대해 취약합니다."
 
-  # 현재 상태를 파일별로 보여줍니다.
+  # 현재 상태를 파일별로 보여주기
   DETAIL_CONTENT="/etc/profile umask=not_set_or_file_missing\n/etc/profile.d/*.sh umask=not_set_or_no_matches\n/etc/bashrc umask=not_set_or_file_missing\n/etc/login.defs UMASK=not_set_or_file_missing"
 else
   VULN_ITEMS=()
@@ -130,27 +131,24 @@ else
     fi
   done
 
-  # DETAIL_CONTENT: 현재 설정값 “전체”를 줄바꿈으로 보여줍니다.
   DETAIL_CONTENT=$(printf "%s\n" "${ALL_ITEMS[@]}" | sed ':a;N;$!ba;s/\n/\\n/g')
 
   if [ "$FOUND_VULN" = "Y" ]; then
     STATUS="FAIL"
-    # 취약 이유는 취약 설정만 노출(요구사항)
+    # 취약 이유
     VULN_REASON=$(printf "%s; " "${VULN_ITEMS[@]}")
     REASON_LINE="${VULN_REASON}로 설정되어 있어 이 항목에 대해 취약합니다."
   else
     STATUS="PASS"
-    # 양호 이유는 양호 설정만 노출(요구사항)
+    # 양호 이유
     OK_REASON=$(printf "%s; " "${OK_ITEMS[@]}")
     REASON_LINE="${OK_REASON}로 설정되어 있어 이 항목에 대해 양호합니다."
   fi
 
-  # 위에서 DETAIL_CONTENT를 \n 문자열로 만들어뒀으니, 여기서는 실제 줄바꿈 형태로 다시 맞춥니다.
-  # RAW_EVIDENCE 만들 때 최종적으로 \n escape를 다시 하므로, 내부 처리는 사람이 읽기 좋게 복원합니다.
   DETAIL_CONTENT=$(echo "$DETAIL_CONTENT" | sed 's/\\n/\n/g')
 fi
 
-# 취약 시 자동 조치 가정 가이드(주의사항 포함)
+# 취약 가정 자동 조치
 GUIDE_LINE="자동 조치:
 /etc/profile과 /etc/login.defs(및 /etc/profile.d/*.sh,/etc/bashrc)에 약한 umask/UMASK 설정이 있으면 022(또는 더 제한적 값)으로 교정하고 마지막 적용 라인을 기준으로 재검증합니다.
 주의사항:

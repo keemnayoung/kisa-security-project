@@ -74,7 +74,7 @@ DETAIL_CONTENT=""
 # 자동 패치 시 발생할 수 있는 서비스 중단 및 호환성 위험 정의
 GUIDE_LINE="이 항목에 대해서 데이터베이스 엔진을 자동으로 업데이트할 경우, 패치 과정 중 DB 서비스가 재시작되어 실시간 트래픽이 차단되거나 신규 버전에서의 쿼리 호환성 문제로 애플리케이션 장애가 발생할 수 있는 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 확인 후 점검 대상 서버의 중요도를 고려하여 백업을 선행하고, 정기 점검 시간에 패키지 매니저(yum, apt 등)를 이용해 최신 보안 패치를 적용하여 조치해 주시기 바랍니다."
 
-# 버전 정보 수집 가능 여부에 따른 분기점
+# 버전 정보 수집 가능 여부
 if [[ $RC0 -eq 124 ]]; then
     STATUS="FAIL"
     REASON_LINE="데이터베이스 응답 지연으로 인해 현재 설치된 버전을 확인할 수 없어 점검을 수행하지 못했습니다."
@@ -109,7 +109,7 @@ else
         REF_SEMVER="$CANDIDATE_SEMVER"
     fi
 
-    # 버전 비교 및 보안성 판단 분기점
+    # 버전 비교 및 보안성 판단
     if [[ -z "$CURRENT_SEMVER" ]]; then
         STATUS="FAIL"
         REASON_LINE="설치된 MySQL 버전 문자열 형식을 해석할 수 없어 점검을 완료할 수 없습니다."
@@ -119,7 +119,7 @@ else
         REASON_LINE="벤더 권고 버전 또는 저장소의 최신 패치 정보를 확인할 수 없어 점검을 수행할 수 없습니다."
         DETAIL_CONTENT="reference_version=NOT_FOUND"
     else
-        # 양호/취약 판정 및 설정값 명시 분기점
+        # 양호/취약 판정 및 설정값 명시
         if version_ge "$CURRENT_SEMVER" "$REF_SEMVER"; then
             STATUS="PASS"
             REASON_LINE="현재 사용 중인 버전(${CURRENT_SEMVER})이 벤더 권고 기준 버전(${REF_SEMVER}) 이상으로 유지되고 있어 이 항목에 대해 양호합니다."
@@ -131,7 +131,7 @@ else
     fi
 fi
 
-# 증적용 JSON 구조화 및 개행 처리
+# raw_evidence 구성
 CHECK_COMMAND="SELECT VERSION(); package manager info check;"
 TARGET_FILE="DBMS(MySQL) Version"
 
@@ -145,12 +145,12 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# 파이썬/DB 환경에서 줄바꿈(\n)이 정상적으로 유지되도록 이스케이프 처리
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 결과 출력 (파이썬 대시보드 연동용)
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

@@ -19,6 +19,7 @@
 
 # [진단] U-45 메일 서비스 버전 점검
 
+# 기본 변수
 ID="U-45"
 CATEGORY="서비스 관리"
 TITLE="메일 서비스 버전 점검"
@@ -33,7 +34,7 @@ STATUS="PASS"
 VULNERABLE=0
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 
-# JSON escape: 백슬래시/따옴표/줄바꿈을 안전하게 DB 저장 가능한 형태로 변환
+# JSON escape 처리 (따옴표, 줄바꿈)
 escape_json_str() {
   printf '%s' "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/\n/\\n/g;s/"/\\"/g'
 }
@@ -73,7 +74,7 @@ CURRENT_LINES=()
 VULN_REASONS=()
 TARGET_FILES=()
 
-# 점검 명령(대시보드 노출용)
+# 점검 명령
 CHECK_COMMAND='
 (systemctl list-units --type=service 2>/dev/null | grep -Ei "sendmail(\.service)?([[:space:]]|$)" || true);
 (systemctl is-active sendmail 2>/dev/null || true);
@@ -264,7 +265,7 @@ else
   TARGET_FILE="N/A"
 fi
 
-# DETAIL_CONTENT: 현재 설정값/상태값만 출력(양호/취약 공통)
+# DETAIL_CONTENT 구성
 DETAIL_CONTENT="$(cat <<EOF
 (현재 설정/상태)
 $(printf "%s\n" "${CURRENT_LINES[@]}")
@@ -275,7 +276,7 @@ exim>=${EXIM_REQUIRED_VERSION}
 EOF
 )"
 
-# REASON_LINE: 한 문장, PASS는 양호 근거(설정값), FAIL은 취약 부분의 설정값만
+# REASON_LINE 구성
 REASON_LINE=""
 if [ "$STATUS" = "PASS" ]; then
   if [ ${#CURRENT_LINES[@]} -eq 0 ]; then
@@ -291,25 +292,25 @@ else
   fi
 fi
 
-# guide: 자동 조치 위험 + 수동 조치 안내(무엇/어떻게)
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="메일 서비스 버전 조치(패치/업그레이드/중지)는 서비스 중단, 메일 큐 처리 영향, 연동 시스템(NMS/애플리케이션 메일 발송) 장애 등 운영 리스크가 존재하여 수동 조치가 필요합니다.
 관리자가 직접 확인 후 사용 중인 메일 서비스(sendmail/postfix/exim)의 벤더 권고에 따라 최신 보안 패치를 적용하거나 최신 버전으로 업그레이드한 뒤 서비스 재기동 후 버전을 재확인해 주시기 바랍니다.
 불필요한 메일 서비스는 중지 및 비활성화하고, 서비스가 비활성인데 프로세스가 잔존하는 경우 정상 종료 후 잔존 프로세스를 정리해 주시기 바랍니다."
 
-# RAW_EVIDENCE JSON 구성
-RAW_EVIDENCE_JSON="$(cat <<EOF
+# raw_evidence 구성
+RAW_EVIDENCE_JSON=$(cat <<EOF
 {
-  "command":"$(escape_json_str "$CHECK_COMMAND")",
-  "detail":"$(escape_json_str "${REASON_LINE}\n${DETAIL_CONTENT}")",
-  "guide":"$(escape_json_str "$GUIDE_LINE")",
-  "target_file":"$(escape_json_str "$TARGET_FILE")"
+  "command":"$CHECK_COMMAND",
+  "detail":"${REASON_LINE}\n${DETAIL_CONTENT}",
+  "guide":"$GUIDE_LINE",
+  "target_file":"$TARGET_FILE_FOR_EVIDENCE"
 }
 EOF
-)"
+)
 
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE_JSON")"
 
-# JSON 출력 직전 빈 줄(프로젝트 규칙)
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

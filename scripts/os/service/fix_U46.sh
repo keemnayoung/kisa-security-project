@@ -15,7 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 설정 분기점
+# 기본 변수 설정
 ID="U-46"
 CATEGORY="서비스 관리"
 TITLE="일반 사용자의 메일 서비스 실행 방지"
@@ -24,7 +24,7 @@ STATUS="PASS"
 ACTION_LOG=""
 TARGET_FILES=()
 
-# 권한 판정 유틸리티 함수 정의 분기점
+# 권한 판정 유틸리티 함수 정의
 is_others_exec_on() {
   local p="$1"
   [[ "$p" =~ ^[0-9]{3,4}$ ]] || return 2
@@ -37,7 +37,7 @@ add_target_file() {
   [ -n "$f" ] && TARGET_FILES+=("$f")
 }
 
-# Sendmail restrictqrun 설정 조치 분기점
+# Sendmail restrictqrun 설정 조치
 SENDMAIL_CF=""
 if command -v sendmail >/dev/null 2>&1; then
   [ -f /etc/mail/sendmail.cf ] && SENDMAIL_CF="/etc/mail/sendmail.cf"
@@ -64,7 +64,7 @@ if command -v sendmail >/dev/null 2>&1; then
   fi
 fi
 
-# Postfix postsuper 실행 권한 제거 조치 분기점
+# Postfix postsuper 실행 권한 제거 조치
 POSTSUPER="/usr/sbin/postsuper"
 if [ -f "$POSTSUPER" ]; then
   add_target_file "$POSTSUPER"
@@ -74,7 +74,7 @@ if [ -f "$POSTSUPER" ]; then
   fi
 fi
 
-# Exim exiqgrep 실행 권한 제거 조치 분기점
+# Exim exiqgrep 실행 권한 제거 조치
 EXIQGREP="/usr/sbin/exiqgrep"
 if [ -f "$EXIQGREP" ]; then
   add_target_file "$EXIQGREP"
@@ -84,7 +84,7 @@ if [ -f "$EXIQGREP" ]; then
   fi
 fi
 
-# 조치 후 상태 검증 및 데이터 수집 분기점
+# 조치 후 상태 검증 및 데이터 수집
 VERIFY_FAIL=0
 AFTER_LINES=""
 
@@ -118,7 +118,7 @@ if [ -f "$EXIQGREP" ]; then
   fi
 fi
 
-# 최종 판정 및 REASON_LINE 확정 분기점
+# 최종 판정
 REASON_LINE=""
 DETAIL_CONTENT=""
 
@@ -137,7 +137,7 @@ else
   DETAIL_CONTENT="$(printf "$AFTER_LINES")"
 fi
 
-# 결과 데이터 구성 및 출력 분기점
+# 결과 데이터 구성 및 출력
 TARGET_FILE_FINAL="$(printf "%s\n" "${TARGET_FILES[@]}" | awk 'NF' | tr '\n' ',' | sed 's/,$//')"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 CHECK_COMMAND="(command -v sendmail >/dev/null 2>&1 && grep PrivacyOptions /etc/mail/sendmail.cf); (stat -c '%a %n' /usr/sbin/postsuper /usr/sbin/exiqgrep 2>/dev/null)"
@@ -146,6 +146,7 @@ json_escape() {
   printf '%s' "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/\n/\\n/g;s/"/\\"/g'
 }
 
+# raw_evidence 구성
 RAW_EVIDENCE_JSON="$(cat <<EOF
 {
   "command":"$(json_escape "$CHECK_COMMAND")",

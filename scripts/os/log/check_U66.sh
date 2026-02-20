@@ -106,12 +106,12 @@ if [ "$LOG_ACTIVE_COUNT" -lt 1 ]; then
   BAD_LOG+="no_active_log_detected_in_major_logfiles\n"
 fi
 
-# 서비스/유효성 실패 분기
+# 서비스/유효성 실패
 BAD_RUNTIME=""
 if [ "$RSYSLOG_RUNNING" != "Y" ]; then STATUS="FAIL"; BAD_RUNTIME+="rsyslog_running=N\n"; fi
 if [ "$RSYSLOG_CONF_OK" != "Y" ]; then STATUS="FAIL"; BAD_RUNTIME+="rsyslog_conf_ok=N\n"; fi
 
-# 현재 설정값(항상 출력)
+# 현재 설정값
 DETAIL_CONTENT="$(cat <<EOF
 rsyslog_running=$RSYSLOG_RUNNING
 rsyslog_conf_ok=$RSYSLOG_CONF_OK
@@ -119,7 +119,7 @@ $POLICY_STATE$(printf "%b" "$LOG_STATE" | sed 's/[[:space:]]*$//')
 EOF
 )"
 
-# 양호/취약 사유 문장(한 문장)
+# 양호/취약 사유 문장
 if [ "$STATUS" = "PASS" ]; then
   REASON_SETTINGS="rsyslog_running=Y, rsyslog_conf_ok=Y, policies=P1~P6 present, active_logs>=1"
   REASON_LINE="${REASON_SETTINGS} 로 설정되어 있어 이 항목에 대해 양호합니다."
@@ -129,9 +129,11 @@ else
   REASON_LINE="${REASON_SETTINGS} 로 설정되어 있어 이 항목에 대해 취약합니다."
 fi
 
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="이 항목은 로그량 증가로 인한 저장소 부족, 성능 저하, 로그 범위/보존기간/회전 정책 불일치 위험이 있어 수동 조치가 필요합니다.
 관리자가 직접 확인 후 rsyslog 설정 파일(/etc/rsyslog.conf 또는 /etc/rsyslog.d/*.conf)에 내부 정책에 맞는 규칙을 반영하고, systemctl restart rsyslog 로 적용한 뒤 /var/log/messages·secure·maillog·cron 갱신 및 로그 보존/로테이션 상태를 점검하여 조치해 주시기 바랍니다."
 
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -143,8 +145,10 @@ $DETAIL_CONTENT",
 EOF
 )
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(json_escape "$RAW_EVIDENCE")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

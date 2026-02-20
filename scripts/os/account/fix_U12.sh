@@ -31,7 +31,7 @@ CHECK_COMMAND="grep -nE '^[[:space:]]*TMOUT=' /etc/profile /etc/profile.d/*.sh /
 MODIFIED=0
 OVERRIDE_REMOVED=0
 
-# 조치 수행 및 타 파일의 우선 순위 설정 제거 분기점
+# 조치 수행 및 타 파일의 우선 순위 설정 제거
 if [ -f "$TARGET_FILE" ]; then
   for f in /etc/profile.d/*.sh /etc/bashrc; do
     [ -e "$f" ] || continue
@@ -42,7 +42,7 @@ if [ -f "$TARGET_FILE" ]; then
     fi
   done
 
-  # /etc/profile 내 기존 설정 삭제 및 신규 값 주입 분기점
+  # /etc/profile 내 기존 설정 삭제 및 신규 값 주입
   if grep -qE 'TMOUT' "$TARGET_FILE" 2>/dev/null; then
     MODIFIED=1
   fi
@@ -64,13 +64,13 @@ if [ -f "$TARGET_FILE" ]; then
   AFTER_VAL=$(grep -iE '^[[:space:]]*TMOUT[[:space:]]*=' /etc/profile /etc/profile.d/*.sh /etc/bashrc 2>/dev/null | grep -vE '^[[:space:]]*#' | tail -n 1 | sed 's/.*=[[:space:]]*//; s/[^0-9].*$//')
   [ -z "$AFTER_VAL" ] && AFTER_VAL="not_set"
 
-  # 현재 설정된 값들만 명시하는 DETAIL_CONTENT 구성
+  # DETAIL_CONTENT 구성
   DETAIL_CONTENT="tmout_value=$AFTER_VAL
 tmout_lines=$AFTER_TMOUT_LINES
 export_status=$([ -n "$AFTER_EXPORT_LINES" ] && echo "exported" || echo "not_exported")
 override_removed=$([ "$OVERRIDE_REMOVED" -eq 1 ] && echo "yes" || echo "no")"
 
-  # 최종 성공 여부 판정 및 REASON_LINE 구성 분기점
+  # 최종 성공 여부 판정 및 REASON_LINE 구성
   if [ "$AFTER_VAL" = "600" ] && [ -n "$AFTER_EXPORT_LINES" ]; then
     IS_SUCCESS=1
     REASON_LINE="세션 종료 시간을 600초로 설정하고 환경변수 export를 적용하여 조치를 완료하여 이 항목에 대해 양호합니다."
@@ -88,7 +88,7 @@ else
   DETAIL_CONTENT="target_file_missing"
 fi
 
-# RAW_EVIDENCE 구성 및 JSON 이스케이프 (기존 방식 유지)
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -102,7 +102,7 @@ RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 결과 JSON 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

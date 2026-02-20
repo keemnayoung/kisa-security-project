@@ -44,11 +44,13 @@ add_target() { [ -n "${1:-}" ] && TARGET_FILE="${TARGET_FILE}${TARGET_FILE:+, }$
 add_pass_reason(){ [ -n "${1:-}" ] && PASS_REASON_PARTS="${PASS_REASON_PARTS}${PASS_REASON_PARTS:+, }$1"; }
 add_fail_reason(){ [ -n "${1:-}" ] && FAIL_REASON_PARTS="${FAIL_REASON_PARTS}${FAIL_REASON_PARTS:+, }$1"; }
 
-noncomment_grep() { # $1=file $2=regex
+# $1=file $2=regex
+noncomment_grep() { 
   grep -Ev '^[[:space:]]*#|^[[:space:]]*$' "$1" 2>/dev/null | grep -qE "$2"
 }
 
-perm_ok_640() { # $1=perm(3~4digits)
+# $1=perm(3~4digits)
+perm_ok_640() { 
   local p="$1"
   [ -z "$p" ] && return 1
   [[ "$p" =~ ^[0-7]{3,4}$ ]] || return 1
@@ -56,7 +58,8 @@ perm_ok_640() { # $1=perm(3~4digits)
   [ "$p" -le 640 ]
 }
 
-check_list_file() { # $1=path $2=label
+# $1=path $2=label
+check_list_file() { 
   local f="$1" label="$2"
   if [ ! -f "$f" ]; then
     VULN=1
@@ -91,7 +94,7 @@ get_limit_login_rule() { # $1=conf
     | head -n 1
 }
 
-# 분기: vsftpd/proftpd 설정 파일 위치 탐색
+# vsftpd/proftpd 설정 파일 위치 탐색
 VSFTPD_CONF=""
 [ -f /etc/vsftpd.conf ] && VSFTPD_CONF="/etc/vsftpd.conf"
 [ -z "$VSFTPD_CONF" ] && [ -f /etc/vsftpd/vsftpd.conf ] && VSFTPD_CONF="/etc/vsftpd/vsftpd.conf"
@@ -100,21 +103,21 @@ PROFTPD_CONF=""
 [ -f /etc/proftpd/proftpd.conf ] && PROFTPD_CONF="/etc/proftpd/proftpd.conf"
 [ -z "$PROFTPD_CONF" ] && [ -f /etc/proftpd.conf ] && PROFTPD_CONF="/etc/proftpd.conf"
 
-# 분기: inetd/xinetd 기반 FTP 활성 여부 단서 확인
+# inetd/xinetd 기반 FTP 활성 여부 단서 확인
 INETD_FTP=0
 [ -f /etc/inetd.conf ] && noncomment_grep /etc/inetd.conf '^[[:space:]]*ftp([[:space:]]|$)' && INETD_FTP=1
 
 XINETD_FTP=0
 [ -f /etc/xinetd.d/ftp ] && noncomment_grep /etc/xinetd.d/ftp '^[[:space:]]*disable[[:space:]]*=[[:space:]]*no' && XINETD_FTP=1
 
-# 분기: FTP 사용 여부 최소 판정
+# FTP 사용 여부 최소 판정
 if systemctl is-active --quiet vsftpd 2>/dev/null || [ -n "$VSFTPD_CONF" ] || \
    systemctl is-active --quiet proftpd 2>/dev/null || [ -n "$PROFTPD_CONF" ] || \
    [ "$INETD_FTP" -eq 1 ] || [ "$XINETD_FTP" -eq 1 ]; then
   FTP_IN_USE=1
 fi
 
-# 분기: vsftpd 점검(사용 중이면 적용 경로 결정)
+# vsftpd 점검(사용 중이면 적용 경로 결정)
 if [ "$FTP_IN_USE" -eq 1 ] && ( command -v vsftpd >/dev/null 2>&1 || [ -n "$VSFTPD_CONF" ] || systemctl is-active --quiet vsftpd 2>/dev/null ); then
   add_target "${VSFTPD_CONF:-/etc/vsftpd.conf(/etc/vsftpd/vsftpd.conf)}"
 
@@ -144,7 +147,7 @@ if [ "$FTP_IN_USE" -eq 1 ] && ( command -v vsftpd >/dev/null 2>&1 || [ -n "$VSFT
   fi
 fi
 
-# 분기: proftpd 점검(UseFtpUsers 설정에 따라 점검 경로 결정)
+# proftpd 점검(UseFtpUsers 설정에 따라 점검 경로 결정)
 if [ "$FTP_IN_USE" -eq 1 ] && ( command -v proftpd >/dev/null 2>&1 || [ -n "$PROFTPD_CONF" ] || systemctl is-active --quiet proftpd 2>/dev/null ); then
   add_target "${PROFTPD_CONF:-/etc/proftpd/proftpd.conf(/etc/proftpd.conf)}"
 
@@ -176,7 +179,7 @@ if [ "$FTP_IN_USE" -eq 1 ] && ( command -v proftpd >/dev/null 2>&1 || [ -n "$PRO
   fi
 fi
 
-# 분기: inetd/xinetd 기반 FTP가 있으면 ftpusers 점검
+# inetd/xinetd 기반 FTP가 있으면 ftpusers 점검
 if [ "$INETD_FTP" -eq 1 ] || [ "$XINETD_FTP" -eq 1 ]; then
   FTP_IN_USE=1
   [ "$INETD_FTP" -eq 1 ] && add_target "/etc/inetd.conf" && append_detail "[inetd] ftp_service=enabled"
@@ -188,7 +191,7 @@ if [ "$INETD_FTP" -eq 1 ] || [ "$XINETD_FTP" -eq 1 ]; then
   check_list_file "$FU" "ftpd_ftpusers"
 fi
 
-# 분기: 최종 판정 및 reason/detail 문장 구성
+# 최종 판정 및 reason/detail 문장 구성
 if [ "$FTP_IN_USE" -eq 0 ]; then
   STATUS="PASS"
   REASON_LINE="FTP 서비스가 비활성화되어 이 항목에 대해 양호합니다."
@@ -217,7 +220,7 @@ GUIDE_LINE=$(cat <<'EOF'
 EOF
 )
 
-# raw_evidence 구성(각 값은 줄바꿈으로 문장 구분)
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

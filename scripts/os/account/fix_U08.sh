@@ -63,7 +63,7 @@
 #     done
 #   fi
 
-#   # 2) (필수 추가) /etc/passwd: 주 그룹(GID=0)인 계정(root 제외) 주 그룹 변경
+#   # /etc/passwd: 주 그룹(GID=0)인 계정(root 제외) 주 그룹 변경
 #   if [ -f "$PASSWD_FILE" ]; then
 #     PRIMARY_GID0_USERS=$(awk -F: '($4==0 && $1!="root"){print $1}' "$PASSWD_FILE" 2>/dev/null)
 

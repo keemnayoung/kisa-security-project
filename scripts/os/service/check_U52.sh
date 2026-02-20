@@ -19,6 +19,7 @@
 
 # [진단] U-52 Telnet 서비스 비활성화
 
+# 기본 변수
 ID="U-52"
 STATUS="PASS"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
@@ -80,7 +81,7 @@ else
   add_detail "xinetd:/etc/xinetd.d/telnet file=not_found"
 fi
 
-# systemd 분기: telnet.socket / telnet.service의 enabled 또는 active 상태를 수집하고 enabled/active면 취약으로 판단
+# systemd: telnet.socket / telnet.service의 enabled 또는 active 상태를 수집하고 enabled/active면 취약으로 판단
 SYS_FIND=0
 for u in telnet.socket telnet.service; do
   EN="unknown"; AC="unknown"
@@ -97,7 +98,7 @@ for u in telnet.socket telnet.service; do
 done
 [ $SYS_FIND -eq 0 ] && add_detail "systemd:telnet.socket/telnet.service enabled_or_active=none_detected"
 
-# SSH 참고 분기: sshd 실행 상태만 수집(판정에는 영향 없음)
+# SSH: sshd 실행 상태만 수집(판정에는 영향 없음)
 SSHD="unknown"
 if command -v systemctl >/dev/null 2>&1; then
   SSHD="$(systemctl is-active sshd 2>/dev/null || echo not_found_or_inactive)"
@@ -116,7 +117,7 @@ else
   REASON_LINE="inetd_telnet=not_found_or_commented, xinetd_disable=yes, systemd_telnet=disabled_or_inactive 로 설정되어 이 항목에 대해 양호합니다."
 fi
 
-# guide 분기: 취약을 가정한 자동 조치 시나리오(조치 방법 + 주의사항)
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="$(cat <<'EOF'
 자동 조치: 
 /etc/inetd.conf에서 telnet 라인을 주석 처리하거나 제거합니다.

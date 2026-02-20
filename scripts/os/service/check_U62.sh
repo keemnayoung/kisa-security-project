@@ -181,7 +181,7 @@ fi
 DETAIL_CONTENT="$DETAIL_LINES"
 [ -n "$DETAIL_CONTENT" ] || DETAIL_CONTENT="none"
 
-# 자동 조치 가이드(문장별 줄바꿈)
+# 취약 가정 자동 조치
 GUIDE_LINE="자동 조치: 
 /etc/issue, /etc/motd, /etc/issue.net 파일이 없거나 비어 있으면 경고 문구를 작성하고 root:root, 644로 설정합니다.
 sshd가 활성 상태이면 /etc/ssh/sshd_config에 Banner /etc/issue.net을 적용한 뒤 sshd를 재시작합니다.

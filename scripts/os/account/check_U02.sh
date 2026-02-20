@@ -21,6 +21,7 @@ ID="U-02"
 STATUS="PASS"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 
+# 점검 대상 파일
 PW_CONF="/etc/security/pwquality.conf"
 PWH_CONF="/etc/security/pwhistory.conf"
 LOGIN_DEFS="/etc/login.defs"
@@ -29,6 +30,7 @@ PAM_PASSWORD_AUTH="/etc/pam.d/password-auth"
 
 TARGET_FILE="$PW_CONF $PWH_CONF $LOGIN_DEFS $PAM_SYSTEM_AUTH $PAM_PASSWORD_AUTH"
 
+# 점검 명령
 CHECK_COMMAND='
 # pwquality.conf
 grep -iv "^[[:space:]]*#" /etc/security/pwquality.conf 2>/dev/null | egrep -i "^(minlen|minclass|dcredit|ucredit|lcredit|ocredit)[[:space:]]*="; \
@@ -130,7 +132,7 @@ append_summary() {
   fi
 }
 
-# 대상/제외 계정은 정책 적용 범위를 확인하기 위해 수집합니다.
+# 대상/제외 계정은 정책 적용 범위를 확인하기 위해 수집
 SUBJECT_USERS=""
 EXCLUDED_USERS=""
 if [ -r /etc/passwd ] && [ -r /etc/shadow ]; then
@@ -164,7 +166,7 @@ else
   EXCLUDED_USERS="unknown(passwd_or_shadow_unreadable)"
 fi
 
-# pwquality.conf 설정을 수집하고 기준 충족 여부를 판정합니다.
+# pwquality.conf 설정을 수집하고 기준 충족 여부 판정
 PWQ_OK="N"
 MINLEN_VAL=""; MINCLASS_VAL=""; DCREDIT_VAL=""; UCREDIT_VAL=""; LCREDIT_VAL=""; OCREDIT_VAL=""; PWQ_ENFORCE="N"
 if [ -f "$PW_CONF" ]; then
@@ -189,7 +191,7 @@ else
   append_summary "pwquality.conf(file_not_found)"
 fi
 
-# pwhistory.conf 설정을 수집하고 기준 충족 여부를 판정합니다.
+# pwhistory.conf 설정을 수집하고 기준 충족 여부 판정
 PWH_OK="N"
 REMEMBER_VAL=""; OPASSWD_FILE_VAL=""; PWH_ENFORCE="N"
 if [ -f "$PWH_CONF" ]; then
@@ -210,7 +212,7 @@ else
   append_summary "pwhistory.conf(file_not_found)"
 fi
 
-# login.defs 설정을 수집하고 기준 충족 여부를 판정합니다.
+# login.defs 설정을 수집하고 기준 충족 여부 판정
 MAX_DAYS_VAL=""; MIN_DAYS_VAL=""
 if [ -f "$LOGIN_DEFS" ]; then
   MAX_DAYS_VAL="$(grep -E '^[[:space:]]*PASS_MAX_DAYS[[:space:]]+' "$LOGIN_DEFS" 2>/dev/null | awk '{print $2}' | tail -n 1)"
@@ -231,7 +233,7 @@ else
   append_summary "login.defs(file_not_found)"
 fi
 
-# PAM 적용 여부와 모듈 순서를 판정합니다.
+# PAM 적용 여부와 모듈 순서 판정
 PAM_FILES=("$PAM_SYSTEM_AUTH" "$PAM_PASSWORD_AUTH")
 PAM_PWQ_OK="N"
 PAM_PWH_OK="N"
@@ -281,7 +283,7 @@ else
   fi
 fi
 
-# DETAIL_CONTENT는 양호/취약과 관계없이 현재 설정값을 모두 출력합니다.
+# DETAIL_CONTENT는 양호/취약과 관계없이 현재 설정값 모두 출력
 DETAIL_LINES+="pwquality.conf(minlen=${MINLEN_VAL:-not_set}, minclass=${MINCLASS_VAL:-not_set}, dcredit=${DCREDIT_VAL:-not_set}, ucredit=${UCREDIT_VAL:-not_set}, lcredit=${LCREDIT_VAL:-not_set}, ocredit=${OCREDIT_VAL:-not_set}, enforce_for_root=${PWQ_ENFORCE})"$'\n'
 DETAIL_LINES+="pwhistory.conf(remember=${REMEMBER_VAL:-not_set}, file=${OPASSWD_FILE_VAL:-not_set}, enforce_for_root=${PWH_ENFORCE})"$'\n'
 DETAIL_LINES+="login.defs(PASS_MAX_DAYS=${MAX_DAYS_VAL:-not_set}, PASS_MIN_DAYS=${MIN_DAYS_VAL:-not_set})"$'\n'
@@ -292,7 +294,7 @@ DETAIL_LINES+="accounts(subject_users=${SUBJECT_USERS:-none}, excluded_users=${E
 
 DETAIL_CONTENT="$(printf "%s" "$DETAIL_LINES" | sed 's/[[:space:]]*$//')"
 
-# 최종 상태에 따라 reason(한 문장)과 detail(첫 줄 reason + 다음 줄부터 DETAIL_CONTENT)를 구성합니다.
+# 최종 상태에 따라 reason과 detail 구성
 if [ "$STATUS_FAIL" = "Y" ]; then
   STATUS="FAIL"
   if [ -z "$VULN_SUMMARY" ]; then
@@ -304,9 +306,10 @@ else
   REASON_LINE="pwquality.conf(minlen=${MINLEN_VAL:-not_set}, dcredit=${DCREDIT_VAL:-not_set}, ucredit=${UCREDIT_VAL:-not_set}, lcredit=${LCREDIT_VAL:-not_set}, ocredit=${OCREDIT_VAL:-not_set}, enforce_for_root=${PWQ_ENFORCE}), pwhistory.conf(remember=${REMEMBER_VAL:-not_set}, file=${OPASSWD_FILE_VAL:-not_set}, enforce_for_root=${PWH_ENFORCE}), login.defs(PASS_MAX_DAYS=${MAX_DAYS_VAL:-not_set}, PASS_MIN_DAYS=${MIN_DAYS_VAL:-not_set}), pam(pwquality_present=${PAM_PWQ_OK}, pwhistory_present=${PAM_PWH_OK}, order_ok=${PAM_ORDER_OK_ALL})로 설정되어 있어 이 항목에 대해 양호합니다."
 fi
 
-# 취약 시 자동 조치를 가정한 가이드와 주의사항을 제공합니다(양호 시에도 동일 형식 유지).
+# 자동 조치 가이드
 GUIDE_LINE=$(cat <<'EOF'
-자동 조치: /etc/security/pwquality.conf에 minlen=8, minclass=3, dcredit=-1, ucredit=-1, lcredit=-1, ocredit=-1 및 enforce_for_root를 설정합니다.
+자동 조치: 
+/etc/security/pwquality.conf에 minlen=8, minclass=3, dcredit=-1, ucredit=-1, lcredit=-1, ocredit=-1 및 enforce_for_root를 설정합니다.
 /etc/security/pwhistory.conf에 remember=4, file=/etc/security/opasswd 및 enforce_for_root를 설정합니다.
 /etc/login.defs에 PASS_MAX_DAYS=90 및 PASS_MIN_DAYS=1을 설정합니다.
 /etc/pam.d/system-auth 및 /etc/pam.d/password-auth에서 pam_pwquality.so와 pam_pwhistory.so 적용 여부를 확인하고 pam_unix.so 위에 위치하도록 정리합니다.
@@ -319,6 +322,7 @@ EOF
 
 COMMAND_ONE_LINE="$(echo "$CHECK_COMMAND" | sed ':a;N;$!ba;s/\n/ /g' | sed 's/[[:space:]]\+/ /g' | sed 's/^ *//;s/ *$//')"
 
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$COMMAND_ONE_LINE",
@@ -330,8 +334,10 @@ $DETAIL_CONTENT",
 EOF
 )
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(json_escape_multiline "$RAW_EVIDENCE")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

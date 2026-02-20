@@ -59,13 +59,13 @@ DETAIL_CONTENT=""
 # 자동 조치 시 애플리케이션 접속 차단 위험과 수동 조치 가이드를 변수로 정의
 GUIDE_LINE="이 항목에 대해서 의심 계정을 자동으로 삭제하거나 잠금 처리할 경우, 해당 계정을 사용 중인 애플리케이션 접속이 즉시 차단되어 서비스가 중단될 수 있는 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 확인 후 사용하지 않는 계정에 대해 DROP ROLE <계정명>; 명령으로 삭제하거나 ALTER ROLE <계정명> NOLOGIN; 명령으로 접속을 차단하여 조치해 주시기 바랍니다."
 
-# 쿼리 실행 성공 여부에 따른 점검 수행 분기점
+# 쿼리 실행 성공 여부에 따른 점검 수행
 if [ $RC -ne 0 ] && [ -z "$ALL_ROLES" ]; then
   STATUS="FAIL"
   REASON_LINE="데이터베이스 ROLE 정보를 조회할 수 없어 불필요 계정 존재 여부를 점검하지 못했습니다."
   DETAIL_CONTENT="connection_error(database_access=FAILED)"
 else
-  # 의심 계정 존재 여부에 따른 양호/취약 결과 판정 분기점
+  # 의심 계정 존재 여부에 따른 양호/취약 결과 판정
   if [ -z "$CANDIDATES" ]; then
     STATUS="PASS"
     REASON_LINE="로그인 가능한 계정이 허용된 관리자 및 시스템 계정으로만 구성되어 있어 이 항목에 대해 양호합니다."
@@ -84,7 +84,7 @@ fi
 CHECK_COMMAND="psql -c \"SELECT rolname FROM pg_roles WHERE rolcanlogin = true;\""
 TARGET_FILE="pg_roles"
 
-# 요구사항에 맞춘 RAW_EVIDENCE 데이터 구조화
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -95,9 +95,10 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# JSON 데이터 최종 이스케이프 및 출력
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

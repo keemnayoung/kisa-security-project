@@ -204,7 +204,6 @@ EOF
 )
 
 # raw_evidence 구성
-# detail: 첫 줄(양호/취약 문장 1개) + 다음 줄부터 현재 설정값(DETAIL_CONTENT)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

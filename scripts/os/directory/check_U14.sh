@@ -21,10 +21,13 @@ STATUS="PASS"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 CHECK_COMMAND="su - root -c 'echo \$PATH'"
 
+# root 계정의 로그인 쉘 확인
 ROOT_SHELL=$(getent passwd root | cut -d: -f7)
 SHELL_NAME=$(basename "$ROOT_SHELL")
 
 TARGET_FILES=()
+
+# 쉘 종류에 따른 점검 대상 파일
 case "$SHELL_NAME" in
   sh)
     TARGET_FILES=(/etc/profile /root/.profile)
@@ -39,6 +42,7 @@ case "$SHELL_NAME" in
     TARGET_FILES=(/etc/profile /etc/bash.bashrc /root/.bash_profile /root/.bashrc)
     ;;
   *)
+    # 예상하지 못한 쉘인 경우에도 최소한의 파일은 확인
     TARGET_FILES=(/etc/profile /root/.profile)
     ;;
 esac
@@ -46,6 +50,7 @@ esac
 TARGET_FILE="$(printf "%s, " "${TARGET_FILES[@]}")"
 TARGET_FILE="${TARGET_FILE%, }"
 
+# 실제 root 로그인 기준의 최종 PATH 값 수집
 ROOT_PATH=$(su - root -c 'echo $PATH' 2>/dev/null)
 
 IFS=':' read -ra PATH_ITEMS <<< "$ROOT_PATH"
@@ -56,13 +61,17 @@ DOT_AT_START="N"
 DOT_IN_MIDDLE="N"
 DOT_AT_END="N"
 
+# PATH를 ':' 기준으로 분리하여 '.'의 위치 판별
 for ITEM in "${PATH_ITEMS[@]}"; do
   if [ "$ITEM" = "." ]; then
     DOT_FOUND="Y"
+    # '.'이 첫 번째 항목이면 맨 앞 → 취약
     if [ "$INDEX" -eq 0 ]; then
       DOT_AT_START="Y"
+    # '.'이 마지막이 아니면 중간 → 취약
     elif [ "$INDEX" -lt $((${#PATH_ITEMS[@]} - 1)) ]; then
       DOT_IN_MIDDLE="Y"
+    # '.'이 마지막 항목이면 양호로 간주
     else
       DOT_AT_END="Y"
     fi
@@ -92,27 +101,36 @@ classify_path_dot_position() {
     fi
   done
 
+  # 파일 내 PATH 정의가 없는 경우
   if [ "$found" = "N" ]; then
     echo "DOT=NONE"
+  # '.'이 맨 앞 또는 중간이면 취약
   elif [ "$start" = "Y" ] || [ "$mid" = "Y" ]; then
     echo "DOT=VULNERABLE(start=$start,mid=$mid,end=$end)"
+  # '.'이 마지막에만 존재하면 양호
   else
     echo "DOT=SAFE(end_only=Y)"
   fi
 }
 
+# 각 환경설정 파일을 순회하며 PATH 정의 라인 추적
 for F in "${TARGET_FILES[@]}"; do
+  # 파일이 존재하지 않는 경우 정보만 기록
   if [ ! -f "$F" ]; then
     FILE_TRACE+="[INFO] $F (not found)\n"
     continue
   fi
 
+  # 주석 제외 PATH 정의 라인만 수집
   LINES=$(grep -E '^[[:space:]]*(export[[:space:]]+)?PATH=' "$F" 2>/dev/null | grep -v '^[[:space:]]*#')
+
+  # PATH 정의 자체가 없는 경우 정보 기록
   if [ -z "$LINES" ]; then
     FILE_TRACE+="[INFO] $F (no PATH definition)\n"
     continue
   fi
 
+  # 각 PATH 정의 라인에 대해 '.' 위치 판별
   while IFS= read -r line; do
     val=$(echo "$line" | sed -E 's/^[[:space:]]*(export[[:space:]]+)?PATH=//')
     val=$(echo "$val" | sed 's/"//g')
@@ -134,12 +152,18 @@ $FILE_TRACE
 EOF
 )
 
+# 최종 상태 판정
+# 1) '.' 자체가 없으면 양호
 if [ "$DOT_FOUND" = "N" ]; then
   STATUS="PASS"
   REASON_LINE="root_path=$ROOT_PATH 에서 '.' 항목이 존재하지 않아 이 항목에 대해 양호합니다."
+
+# 2) '.'이 마지막에만 존재하면 양호
 elif [ "$DOT_AT_END" = "Y" ] && [ "$DOT_AT_START" = "N" ] && [ "$DOT_IN_MIDDLE" = "N" ]; then
   STATUS="PASS"
   REASON_LINE="root_path=$ROOT_PATH 에서 '.'이 마지막 항목에만 위치해 이 항목에 대해 양호합니다."
+
+# 3) 그 외(맨 앞 또는 중간)는 취약
 else
   STATUS="FAIL"
   if [ "$DOT_AT_START" = "Y" ]; then
@@ -149,6 +173,7 @@ else
   fi
 fi
 
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE=$(cat <<'EOF'
 이 항목에 대해서 PATH 탐색 순서가 의도치 않게 변경될 위험이 존재하여 수동 조치가 필요합니다.
 자동 조치로 여러 환경설정 파일의 PATH 라인을 일괄 수정하면 로그인/비로그인 쉘 반영 시점 차이로 인해 작업 절차에 혼선이 생기거나, PATH 재구성 과정에서 오타·중복·누락이 발생해 관리자 작업 및 일부 스크립트 실행에 영향을 줄 수 있습니다.

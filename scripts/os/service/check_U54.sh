@@ -17,6 +17,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
+# 기본 변수
 ID="U-54"
 STATUS="PASS"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
@@ -102,7 +103,7 @@ fi
 DETAIL_CONTENT="${DETAIL_LINES:-none}"
 [ -z "$TARGET_FILE" ] && TARGET_FILE="/etc/inetd.conf, /etc/xinetd.d/{ftp,proftp,vsftp}, systemd:{vsftpd,proftpd,pure-ftpd}.service"
 
-# 최종 판정 및 detail(첫 문장 1줄 + 다음 줄부터 현재 설정 값들)
+# 최종 판정 및 detail
 if [ "$VULNERABLE" -eq 1 ]; then
   STATUS="FAIL"
   [ -z "$REASON_FACTS" ] && REASON_FACTS="암호화되지 않은 FTP 관련 설정/서비스가 활성 상태로 확인됨"

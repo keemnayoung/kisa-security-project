@@ -22,6 +22,7 @@ SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 
 TARGET_FILE="/etc/hosts.equiv /home/*/.rhosts"
 
+# 점검 명령
 CHECK_COMMAND='
 # service check
 (ps -ef | grep -E "rlogin|rsh|rexec|in\.rlogind|in\.rshd|in\.rexecd" | grep -v grep 2>/dev/null);
@@ -48,7 +49,7 @@ json_escape() {
   echo "$1" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g'
 }
 
-# 서비스 사용 여부 판정
+# 서비스 사용 여부
 PS_USED=$(ps -ef | grep -E 'rlogin|rsh|rexec|in\.rlogind|in\.rshd|in\.rexecd' | grep -v grep 2>/dev/null)
 if [ -n "$PS_USED" ]; then
   SERVICE_USED="YES"
@@ -80,7 +81,6 @@ fi
 # 점검 대상 파일 수집
 RHOSTS_FILES=$(find /home -name ".rhosts" -type f 2>/dev/null)
 
-# 현재 설정(DETAIL_CONTENT) 구성: 항상 전체 현황 표시
 DETAIL_CONTENT="${SERVICE_LINE}"
 if [ -f /etc/hosts.equiv ]; then
   HE_OWNER=$(stat -c %U /etc/hosts.equiv 2>/dev/null)
@@ -111,7 +111,7 @@ else
   DETAIL_CONTENT="${DETAIL_CONTENT}\nfile=/home/*/.rhosts not_found"
 fi
 
-# 취약 설정만 요약(어떠한 이유용)
+# 취약 설정
 VULN_SUMMARY=""
 
 # 파일 기준 점검
@@ -172,6 +172,7 @@ else
   GUIDE_LINE=""
 fi
 
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -185,6 +186,7 @@ EOF
 
 RAW_EVIDENCE_ESCAPED=$(json_escape "$RAW_EVIDENCE")
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

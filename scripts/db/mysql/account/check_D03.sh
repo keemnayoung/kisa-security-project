@@ -121,7 +121,7 @@ else
   fi
 fi
 
-# 증적 데이터 JSON 구조화
+# raw_evidence 구성
 CHECK_COMMAND="$MYSQL_CMD_BASE \"$QUERY\""
 RAW_EVIDENCE=$(cat <<EOF
 {
@@ -133,12 +133,12 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# DB 저장 및 파이썬 파싱을 위한 이스케이프 처리
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 JSON 결과값 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

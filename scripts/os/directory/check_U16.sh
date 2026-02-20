@@ -43,7 +43,7 @@ else
   FILE_OWNER="$(stat -c "%U" "$TARGET_FILE" 2>/dev/null)"
   FILE_PERM_STR="$(stat -c "%a" "$TARGET_FILE" 2>/dev/null)"
 
-  # 권한 형식이 비정상이면 취약 처리(판단 불가 = 위험)
+  # 권한 형식이 비정상이면 취약 처리
   if ! echo "$FILE_PERM_STR" | grep -Eq '^[0-7]{3,4}$'; then
     STATUS="FAIL"
 
@@ -55,7 +55,7 @@ else
     주의사항: 
     권한 값이 비정상으로 수집될 경우 파일시스템/권한/속성(immutable 등) 문제일 수 있으니 강제 변경 전 원인을 확인하고 백업을 권장합니다."
   else
-    # 8진수 권한을 정수로 변환해 비트 기준으로 정확 판정
+    # 비트 기준으로 정확 판정
     FILE_PERM_DEC=$((8#$FILE_PERM_STR))
 
     # 기준 판정 값 산출
@@ -67,7 +67,6 @@ else
     [ $((FILE_PERM_DEC & 022)) -eq 0 ] && WRITE_OK=1
     [ $((FILE_PERM_DEC & 07000)) -eq 0 ] && SPECIAL_OK=1
 
-    # DETAIL_CONTENT는 양호/취약과 무관하게 "현재 설정값"만 출력
     if [ "$WRITE_OK" -eq 1 ]; then
       WRITE_DESC="no"
     else
@@ -82,7 +81,6 @@ else
 
     DETAIL_CONTENT="owner=$FILE_OWNER\nperm=$FILE_PERM_STR\ngroup_or_other_write=$WRITE_DESC\nspecial_bits=$SPECIAL_DESC"
 
-    # 양호/취약 사유(첫 문장)는 한 줄, 설정값 기반으로 자연스럽게 연결
     if [ "$OWNER_OK" -eq 1 ] && [ "$WRITE_OK" -eq 1 ] && [ "$SPECIAL_OK" -eq 1 ] && [ "$FILE_PERM_STR" -le 644 ]; then
       STATUS="PASS"
       REASON_LINE="소유자=root, 권한=$FILE_PERM_STR(그룹/기타 쓰기 없음, 특수권한 없음)으로 설정되어 있어 이 항목에 대해 양호합니다."
@@ -93,7 +91,6 @@ else
     else
       STATUS="FAIL"
 
-      # 취약 사유에는 "취약한 부분의 설정만" 포함
       BAD_PARTS=""
       if [ "$OWNER_OK" -ne 1 ]; then
         BAD_PARTS="소유자=$FILE_OWNER"
@@ -122,7 +119,7 @@ else
   fi
 fi
 
-# raw_evidence 구성 (각 문장은 줄바꿈으로 구분, detail은 첫 줄+다음 줄부터 설정값)
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -133,7 +130,7 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# JSON 저장을 위한 escape 처리 (따옴표, 줄바꿈) - DB 저장/재로딩 시 줄바꿈 유지 목적
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')

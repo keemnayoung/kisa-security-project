@@ -25,7 +25,7 @@
 # STATUS="FAIL"
 # ACTION_LOG="N/A"
 
-# # 1. 백업 생성
+# # 백업 생성
 # if [ -f "$TARGET_FILE" ]; then
 #     cp -p "$TARGET_FILE" "${TARGET_FILE}_bak_$TIMESTAMP"
 # else
@@ -35,7 +35,7 @@
 #     exit 1
 # fi
 
-# # 2. 실제 조치 프로세스
+# # 실제 조치 프로세스
 # {
 #     # pam_wheel.so 설정 활성화 (주석 제거 및 use_uid 옵션 강제)
 #     if grep -qi "pam_wheel.so" "$TARGET_FILE"; then
@@ -50,7 +50,7 @@
 #         sed -i '1i auth            required        pam_wheel.so use_uid' "$TARGET_FILE"
 #     fi
 
-#     # 3. [검증] 조치 후 상태 재확인
+#     # [검증] 조치 후 상태 재확인
 #     FINAL_CHECK=$(grep -v '^#' "$TARGET_FILE" | grep "pam_wheel.so" | grep "auth" | grep "required")
 #     if [ -n "$FINAL_CHECK" ]; then
 #         ACTION_RESULT="SUCCESS"
@@ -65,7 +65,7 @@
 #     ACTION_LOG="설정 파일 수정 중 오류가 발생하여 시스템 인증 체계의 안정성을 위해 기존 설정으로 복구 조치를 완료하였습니다."
 # }
 
-# # 4. 표준 JSON 출력
+# # 표준 JSON 출력
 # echo ""
 # cat << EOF
 # {

@@ -15,7 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 설정 분기점
+# 기본 변수 설정
 ID="U-52"
 ACTION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 IS_SUCCESS=0
@@ -25,7 +25,7 @@ TARGET_FILE=""
 ACTION_ERR_LOG=""
 MODIFIED=0
 
-# 유틸리티 함수 정의 분기점
+# 유틸리티 함수 정의
 add_detail(){ [ -n "${1:-}" ] && DETAIL_CONTENT="${DETAIL_CONTENT}${DETAIL_CONTENT:+\n}$1"; }
 add_err(){ [ -n "${1:-}" ] && ACTION_ERR_LOG="${ACTION_ERR_LOG}${ACTION_ERR_LOG:+\n}$1"; }
 add_target(){ [ -n "${1:-}" ] && TARGET_FILE="${TARGET_FILE}${TARGET_FILE:+, }$1"; }
@@ -49,12 +49,12 @@ disable_mask_if_exists() {
   return 0
 }
 
-# 권한 확인 및 조치 수행 분기점
+# 권한 확인 및 조치 수행
 if [ "$(id -u)" -ne 0 ]; then
   REASON_LINE="root 권한이 아니어서 Telnet 서비스 비활성화를 적용할 수 없어 조치를 중단합니다."
   add_err "(주의) root 권한이 아니면 설정 파일 수정 및 서비스 중지/비활성화가 실패할 수 있습니다."
 else
-  # 1) inetd 기반 설정 조치 분기점
+  # 1) inetd 기반 설정 조치
   INETD="/etc/inetd.conf"
   add_target "$INETD"
   if [ -f "$INETD" ] && grep -v '^[[:space:]]*#' "$INETD" 2>/dev/null | grep -qE '^[[:space:]]*telnet([[:space:]]|$)'; then
@@ -64,7 +64,7 @@ else
     restart_svc_if_exists "inetd.service" || add_err "inetd.service 재시작 실패"
   fi
 
-  # 2) xinetd 기반 설정 조치 분기점
+  # 2) xinetd 기반 설정 조치
   XINETD="/etc/xinetd.d/telnet"
   add_target "$XINETD"
   if [ -f "$XINETD" ]; then
@@ -80,12 +80,12 @@ else
     restart_svc_if_exists "xinetd.service" || true
   fi
 
-  # 3) systemd 기반 서비스 조치 분기점
+  # 3) systemd 기반 서비스 조치
   for u in telnet.socket telnet.service telnetd.socket telnetd.service; do
     disable_mask_if_exists "$u"
   done
 
-  # 조치 후 최종 상태 데이터 수집 분기점
+  # 조치 후 최종 상태 데이터 수집
   INETD_VAL="not_found"
   if [ -f "$INETD" ]; then
     INETD_VAL=$(grep -E "^[[:space:]]*#?telnet([[:space:]]|$)" "$INETD" | head -n 1 | awk '{$1=$1;print}' || echo "no_telnet_line")
@@ -110,7 +110,7 @@ else
     add_detail "ssh_status: $SSH_ACTIVE"
   fi
 
-  # 조치 후 최종 검증 및 판정 분기점
+  # 조치 후 최종 검증 및 판정
   TELNET_BAD=0
   if [ -f "$INETD" ] && grep -v '^[[:space:]]*#' "$INETD" 2>/dev/null | grep -qE '^[[:space:]]*telnet([[:space:]]|$)'; then TELNET_BAD=1; fi
   if [ -f "$XINETD" ]; then
@@ -133,7 +133,7 @@ else
   fi
 fi
 
-# 결과 데이터 출력 분기점
+# 결과 데이터 출력
 [ -n "$ACTION_ERR_LOG" ] && add_detail "[Error_Log]\n$ACTION_ERR_LOG"
 [ -z "$TARGET_FILE" ] && TARGET_FILE="/etc/inetd.conf, /etc/xinetd.d/telnet, systemd(telnet*.socket/service)"
 CHECK_COMMAND="grep telnet /etc/inetd.conf; cat /etc/xinetd.d/telnet; systemctl status telnet.socket"

@@ -40,6 +40,7 @@ FOUND_VULN="N"
 VULN_LINES=""
 ALL_LINES=""
 
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="자동 조치 시 사용자 환경 설정(.bashrc 등) 변경으로 서비스/업무 스크립트 동작에 영향이 있을 수 있어 수동 조치가 필요합니다.
 관리자가 직접 확인 후 환경변수 파일의 소유자를 root 또는 해당 계정으로 변경하고, group/other 쓰기 권한(g-w, o-w)을 제거해 주시기 바랍니다."
 
@@ -90,26 +91,24 @@ done < /etc/passwd
 if [ "$FOUND_VULN" = "Y" ]; then
   TARGET_FILE="$(echo "$TARGET_FILE" | tr -s ' ' | sed 's/[[:space:]]*$//')"
 
-  # 취약 근거 문장에는 취약 설정만(한 문장) 포함
+  # 취약 근거
   VULN_SUMMARY="$(printf "%s" "$VULN_LINES" | sed 's/[[:space:]]*$//' | tr '\n' '; ' | sed 's/;[[:space:]]*$//')"
   REASON_LINE="$VULN_SUMMARY 설정으로 이 항목에 대해 취약합니다."
 
-  # DETAIL_CONTENT에는 양호/취약 관계 없이 현재 설정값(전체) 표시
   ALL_TRIMMED="$(printf "%s" "$ALL_LINES" | sed 's/[[:space:]]*$//')"
   DETAIL_CONTENT="${ALL_TRIMMED:-no_env_files_found}"
 else
   STATUS="PASS"
   TARGET_FILE="user_home_env_files"
 
-  # 양호 근거 문장(한 문장)
+  # 양호 근거
   REASON_LINE="모든 환경변수 파일이 owner=root 또는 owner=해당 계정이고 perm에서 g-w/o-w 미부여로 설정되어 있어 이 항목에 대해 양호합니다."
 
-  # DETAIL_CONTENT에는 현재 설정값(전체) 표시
   ALL_TRIMMED="$(printf "%s" "$ALL_LINES" | sed 's/[[:space:]]*$//')"
   DETAIL_CONTENT="${ALL_TRIMMED:-no_env_files_found}"
 fi
 
-# raw_evidence 구성 (첫 줄: 평가 문장 / 다음 줄부터: 현재 설정값)
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

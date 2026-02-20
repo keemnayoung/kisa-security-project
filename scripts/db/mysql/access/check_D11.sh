@@ -99,7 +99,7 @@ else
             VULN_SAMPLES="${VULN_SAMPLES}${grantee}(${priv}), "
         done <<< "$LIST"
 
-        # 최종 양호/취약 판정 및 사유 생성 분기점
+        # 최종 양호/취약 판정 및 사유
         if [[ "$VIOLATION_COUNT" -eq 0 ]]; then
             STATUS="PASS"
             REASON_LINE="시스템 스키마 권한이 허용된 관리 계정(${ALLOWED_USERS_CSV})으로만 제한되어 있어 이 항목에 대해 양호합니다."
@@ -116,7 +116,7 @@ fi
 # 증적용 실행 명령어 정리
 CHECK_COMMAND="mysql -e \"SELECT GRANTEE, TABLE_SCHEMA, PRIVILEGE_TYPE FROM information_schema.schema_privileges...\""
 
-# RAW_EVIDENCE JSON 구성
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -127,12 +127,12 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# JSON 데이터의 파이썬/DB 호환을 위한 이스케이프 처리
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 JSON 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF_JSON
 {

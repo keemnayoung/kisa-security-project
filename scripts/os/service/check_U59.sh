@@ -17,6 +17,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
+# 기본 변수
 ID="U-59"
 STATUS="PASS"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
@@ -41,7 +42,7 @@ if [ "$ACTIVE" = "active" ] || [ -n "$PROC_LINE" ]; then SNMP_RUNNING=1; fi
 append_line "[systemd] snmpd_active=$ACTIVE snmpd_enabled=$ENABLED"
 append_line "[process] ${PROC_LINE:-snmpd_not_running}"
 
-# 기본 안내(수동 조치 필요 사유 + 조치 방법)
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="이 항목에 대해서 SNMP 설정을 자동 변경하면 모니터링 연동(NMS) 장애 또는 인증 정보 불일치로 서비스 영향이 발생할 위험이 존재하여 수동 조치가 필요합니다.
 관리자가 직접 확인 후 snmpd.conf에서 SNMPv1/v2c(rocommunity/rwcommunity/com2sec) 설정을 제거 또는 주석 처리하고, SNMPv3 사용자(createUser) 생성 및 rouser/rwuser 권한 부여를 적용한 뒤 snmpd 재기동으로 반영해 주시기 바랍니다."
 
@@ -110,7 +111,7 @@ fi
 [ -z "$DETAIL_CONTENT" ] && DETAIL_CONTENT="none"
 [ -z "$TARGET_FILE" ] && TARGET_FILE="N/A"
 
-# PASS/FAIL에 따라 detail 첫 문장을 구성(첫 문장은 1줄, 이후 DETAIL_CONTENT를 줄바꿈으로 연결)
+# PASS/FAIL
 if [ "$STATUS" = "PASS" ]; then
   DETAIL_VALUE="${REASON_SENTENCE}\n${DETAIL_CONTENT}"
 else

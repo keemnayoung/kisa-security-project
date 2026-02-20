@@ -15,7 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 설정 분기점
+# 기본 변수 설정
 ID="U-44"
 CATEGORY="서비스 관리"
 TITLE="tftp, talk 서비스 비활성화"
@@ -29,7 +29,7 @@ SYSTEMD_UNITS_CANDIDATES=(
   "tftp.service" "tftp.socket" "talk.service" "ntalk.service" "talkd.service" "ntalkd.service"
 )
 
-# 유틸리티 함수 정의 분기점
+# 유틸리티 함수 정의
 escape_json_str() {
   printf '%s' "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/\n/\\n/g;s/"/\\"/g'
 }
@@ -40,7 +40,7 @@ unit_exists() {
   systemctl list-unit-files 2>/dev/null | awk '{print $1}' | grep -qx "$u"
 }
 
-# inetd 기반 서비스 조치 분기점
+# inetd 기반 서비스 조치
 INETD_CHANGED=0
 if [ -f "/etc/inetd.conf" ]; then
   for svc in "${SERVICES[@]}"; do
@@ -59,7 +59,7 @@ if [ -f "/etc/inetd.conf" ]; then
   fi
 fi
 
-# xinetd 기반 서비스 조치 분기점
+# xinetd 기반 서비스 조치
 XINETD_CHANGED=0
 if [ -d "/etc/xinetd.d" ]; then
   for svc in "${SERVICES[@]}"; do
@@ -86,7 +86,7 @@ if [ -d "/etc/xinetd.d" ]; then
   fi
 fi
 
-# systemd 기반 서비스 조치 분기점
+# systemd 기반 서비스 조치
 SYSTEMD_CHANGED=0
 SYSTEMD_FOUND_UNITS=""
 if command -v systemctl >/dev/null 2>&1; then
@@ -109,7 +109,7 @@ if command -v systemctl >/dev/null 2>&1; then
   done
 fi
 
-# 조치 후 상태 검증 및 수집 분기점
+# 조치 후 상태 검증 및 수집
 AFTER_INETD_ACTIVE=""
 AFTER_XINETD_BAD=""
 AFTER_SYSTEMD_BAD=""
@@ -132,7 +132,7 @@ if command -v systemctl >/dev/null 2>&1; then
   done
 fi
 
-# 최종 판정 및 REASON_LINE 확정 분기점
+# 최종 판정 및 REASON_LINE 확정
 if [ -z "$AFTER_INETD_ACTIVE" ] && [ -z "$AFTER_XINETD_BAD" ] && [ -z "$AFTER_SYSTEMD_BAD" ]; then
   IS_SUCCESS=1
   REASON_LINE="tftp, talk, ntalk 서비스를 모든 관리 체계에서 중지하고 비활성화하여 조치를 완료하여 이 항목에 대해 양호합니다."
@@ -145,7 +145,7 @@ DETAIL_CONTENT="inetd_status: ${AFTER_INETD_ACTIVE:-no_active_lines}
 xinetd_status: ${AFTER_XINETD_BAD:-all_disabled}
 systemd_status: ${AFTER_SYSTEMD_BAD:-all_stopped}"
 
-# 결과 데이터 구성 및 출력 분기점
+# 결과 데이터 구성 및 출력
 CHECK_COMMAND="( [ -f /etc/inetd.conf ] && grep -nEv '^[[:space:]]*#|^[[:space:]]*$' /etc/inetd.conf | grep -nE '^[[:space:]]*(tftp|talk|ntalk)\\b' || true ); ( [ -d /etc/xinetd.d ] && grep -nEi '^[[:space:]]*disable[[:space:]]*=[[:space:]]*no\\b' /etc/xinetd.d/{tftp,talk,ntalk} 2>/dev/null || true ); ( command -v systemctl >/dev/null 2>&1 && ( systemctl list-unit-files 2>/dev/null | egrep '(^|/)(tftp|talk|ntalk).*\\.(service|socket)[[:space:]]' || true ) )"
 
 RAW_EVIDENCE_JSON="$(cat <<EOF

@@ -15,7 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 설정 분기점
+# 기본 변수 설정
 ID="U-43"
 CATEGORY="서비스 관리"
 TITLE="NIS, NIS+ 점검"
@@ -28,7 +28,7 @@ SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 NIS_UNITS=("ypserv.service" "ypbind.service" "ypxfrd.service" "rpc.yppasswdd.service" "rpc.ypupdated.service")
 CHECK_COMMAND="systemctl is-active/is-enabled (NIS units)"
 
-# 조치 수행 분기점
+# 조치 수행
 if ! command -v systemctl >/dev/null 2>&1; then
   STATUS="ERROR"
   ACTION_LOG="systemctl 명령을 사용할 수 없어 NIS 관련 서비스 조치를 수행하지 못했습니다."
@@ -46,7 +46,7 @@ else
     fi
   done
 
-  # 조치 후 상태 검증 및 수집 분기점
+  # 조치 후 상태 검증 및 수집
   AFTER_ACTIVE=""
   AFTER_ENABLED=""
   SUMMARY_DETAIL=""
@@ -72,7 +72,7 @@ else
   fi
 fi
 
-# 최종 REASON_LINE 및 DETAIL_CONTENT 확정 분기점
+# 최종 판정
 REASON_LINE=""
 DETAIL_CONTENT="$SUMMARY_DETAIL"
 
@@ -89,7 +89,7 @@ if [ -n "$ACTION_LOG" ]; then
   DETAIL_CONTENT="${DETAIL_CONTENT}[Error_Log] ${ACTION_LOG}"
 fi
 
-# 결과 데이터 구성 및 출력 분기점
+# 결과 데이터 구성 및 출력
 json_escape() {
   printf '%s' "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/\n/\\n/g;s/"/\\"/g'
 }

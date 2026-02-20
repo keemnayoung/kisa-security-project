@@ -17,6 +17,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
+# 기본 변수
 ID="U-46"
 CATEGORY="서비스 관리"
 TITLE="일반 사용자의 메일 서비스 실행 방지"
@@ -30,25 +31,28 @@ FILE_HASH="NOT_FOUND"
 
 DETAIL_CONTENT=""
 REASON_SUMMARY=""
-GUIDE_LINE="N/A"
+GUIDE_LINE=""
 
 SENDMAIL_CF=""
 POSTSUPER="/usr/sbin/postsuper"
 EXIQGREP="/usr/sbin/exiqgrep"
 
-is_others_exec_on() {
+# 파일 권한 숫자에서 others(기타 사용자) 실행(x) 권한이 켜져 있는지(o+x) 판정
+is_others_exec_on() { 
   local p="$1"
   [[ "$p" =~ ^[0-9]{3,4}$ ]] || return 2
   local o=$(( p % 10 ))
   (( (o & 1) == 1 ))
 }
 
-add_target_file() {
+# 점검 대상으로 확인된 파일/경로를 TARGET_FILES 배열에 추가
+add_target_file() { 
   local f="$1"
   [ -n "$f" ] && TARGET_FILES+=("$f")
 }
 
-append_line() {
+# 지정한 변수 문자열에 줄바꿈을 붙여 한 줄씩 누적(첫 줄이면 그대로, 이후는 \n 추가)
+append_line() { 
   local var_name="$1"
   local line="$2"
   if [ -z "${!var_name}" ]; then
@@ -58,7 +62,8 @@ append_line() {
   fi
 }
 
-append_summary() {
+# REASON_SUMMARY에 요약 문구를 쉼표로 이어 붙여 누적(빈 값은 무시)
+append_summary() { 
   local part="$1"
   [ -z "$part" ] && return 0
   if [ -z "$REASON_SUMMARY" ]; then
@@ -68,7 +73,8 @@ append_summary() {
   fi
 }
 
-# Sendmail 분기: 설치 여부 → 설정 파일 존재 여부 → PrivacyOptions 값 확인
+
+# Sendmail 점검: 설치 여부 → 설정 파일 존재 여부 → PrivacyOptions 값 확인
 if command -v sendmail >/dev/null 2>&1; then
   [ -f /etc/mail/sendmail.cf ] && SENDMAIL_CF="/etc/mail/sendmail.cf"
   [ -z "$SENDMAIL_CF" ] && [ -f /etc/sendmail.cf ] && SENDMAIL_CF="/etc/sendmail.cf"
@@ -98,7 +104,7 @@ else
   append_line DETAIL_CONTENT "sendmail: not_installed"
 fi
 
-# Postfix 분기: postsuper 존재 여부 → 파일 존재 여부 → 권한(o+x) 확인
+# Postfix 점검: postsuper 존재 여부 → 파일 존재 여부 → 권한(o+x) 확인
 if command -v postsuper >/dev/null 2>&1; then
   if [ -f "$POSTSUPER" ]; then
     add_target_file "$POSTSUPER"
@@ -124,7 +130,7 @@ else
   append_line DETAIL_CONTENT "postfix: not_installed"
 fi
 
-# Exim 분기: exiqgrep 파일 존재 여부 → 권한(o+x) 확인
+# Exim 점검: exiqgrep 파일 존재 여부 → 권한(o+x) 확인
 if [ -f "$EXIQGREP" ]; then
   add_target_file "$EXIQGREP"
   E_PERMS="$(stat -c '%a' "$EXIQGREP" 2>/dev/null)"
@@ -155,30 +161,31 @@ else
   FILE_HASH="NOT_FOUND"
 fi
 
-# 판정 분기: 점검 대상이 없으면 PASS 처리
+# 최종 판정
 if [ ${#TARGET_FILES[@]} -eq 0 ]; then
   STATUS="PASS"
   REASON_LINE="메일 서비스 관련 설정/바이너리가 발견되지 않아 이 항목에 대해 양호합니다."
-  GUIDE_LINE="N/A"
 else
   if [ "$VULNERABLE" -eq 1 ]; then
     STATUS="FAIL"
     REASON_LINE="${REASON_SUMMARY}로 이 항목에 대해 취약합니다."
+
+  else
+    STATUS="PASS"
+    REASON_LINE="${REASON_SUMMARY}로 이 항목에 대해 양호합니다."
+  fi
+fi
+
+SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
+
     GUIDE_LINE="자동 조치:
     sendmail의 sendmail.cf에서 PrivacyOptions에 restrictqrun을 포함하도록 반영하고 sendmail 서비스를 재시작합니다.
     /usr/sbin/postsuper 및 /usr/sbin/exiqgrep의 others 실행 권한(o+x)을 제거합니다.
     주의사항: 
     메일 큐 관련 운영 작업(큐 실행/관리)을 일반 계정에서 수행하던 환경에서는 작업 흐름이 변경될 수 있습니다.
     sendmail 재시작 시 짧은 서비스 재시작 구간이 발생할 수 있어 운영 시간대 적용은 피하는 것이 안전합니다."
-  else
-    STATUS="PASS"
-    REASON_LINE="${REASON_SUMMARY}로 이 항목에 대해 양호합니다."
-    GUIDE_LINE="N/A"
-  fi
-fi
 
-SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
-
+# 점검 명령
 CHECK_COMMAND="$(cat <<'EOF'
 (command -v sendmail >/dev/null 2>&1 && (grep -iE '^[[:space:]]*(O[[:space:]]+)?PrivacyOptions' /etc/mail/sendmail.cf 2>/dev/null | grep -v '^#' || grep -iE '^[[:space:]]*(O[[:space:]]+)?PrivacyOptions' /etc/sendmail.cf 2>/dev/null | grep -v '^#'));
 (command -v postsuper >/dev/null 2>&1 && stat -c '%a %n' /usr/sbin/postsuper 2>/dev/null);
@@ -190,6 +197,7 @@ escape_json_str() {
   printf '%s' "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/\n/\\n/g;s/"/\\"/g'
 }
 
+# raw_evidence 구성
 RAW_EVIDENCE_JSON="$(cat <<EOF
 {
   "command":"$(escape_json_str "$CHECK_COMMAND")",
@@ -200,8 +208,10 @@ RAW_EVIDENCE_JSON="$(cat <<EOF
 EOF
 )"
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE_JSON")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

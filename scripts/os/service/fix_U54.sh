@@ -15,7 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 설정 분기점
+# 기본 변수 설정
 ID="U-54"
 ACTION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 IS_SUCCESS=0
@@ -24,7 +24,6 @@ DETAIL_CONTENT=""
 TARGET_FILE="/etc/inetd.conf, /etc/xinetd.d/{ftp,proftp,vsftp}, systemd:{vsftpd,proftpd,pure-ftpd}.service"
 ACTION_ERR_LOG=""
 
-# 유틸리티 함수 정의 분기점
 add_detail(){ [ -n "${1:-}" ] && DETAIL_CONTENT="${DETAIL_CONTENT}${DETAIL_CONTENT:+\n}$1"; }
 add_err(){ [ -n "${1:-}" ] && ACTION_ERR_LOG="${ACTION_ERR_LOG}${ACTION_ERR_LOG:+\n}$1"; }
 
@@ -35,12 +34,12 @@ backup_if_file(){
   return 0
 }
 
-# 권한 확인 및 조치 수행 분기점
+# 권한 확인 및 조치 수행
 if [ "$(id -u)" -ne 0 ]; then
   REASON_LINE="root 권한이 아니어서 암호화되지 않은 FTP 서비스 비활성화를 적용할 수 없어 조치를 중단합니다."
   add_err "(주의) root 권한이 아니면 설정 파일 수정 및 서비스 중지/비활성화가 실패할 수 있습니다."
 else
-  # 1) inetd 기반 설정 조치 분기점
+  # 1) inetd 기반 설정 조치
   if [ -f /etc/inetd.conf ]; then
     if grep -nEv '^[[:space:]]*#' /etc/inetd.conf 2>/dev/null | grep -qE '^[[:space:]]*ftp([[:space:]]|$)'; then
       backup_if_file /etc/inetd.conf || add_err "/etc/inetd.conf 백업 실패"
@@ -51,7 +50,7 @@ else
     fi
   fi
 
-  # 2) xinetd 기반 설정 조치 분기점
+  # 2) xinetd 기반 설정 조치
   if [ -d /etc/xinetd.d ]; then
     XCH=0
     for f in /etc/xinetd.d/ftp /etc/xinetd.d/proftp /etc/xinetd.d/vsftp; do
@@ -67,7 +66,7 @@ else
     fi
   fi
 
-  # 3) systemd 기반 서비스 조치 분기점
+  # 3) systemd 기반 서비스 조치
   if command -v systemctl >/dev/null 2>&1; then
     for s in vsftpd proftpd pure-ftpd; do
       if systemctl list-unit-files 2>/dev/null | grep -qE "^${s}\.service"; then
@@ -78,7 +77,7 @@ else
     done
   fi
 
-  # 조치 후 최종 상태 데이터 수집 및 검증 분기점
+  # 조치 후 최종 상태 데이터 수집 및 검증
   FTP_ACTIVE=0
 
   # inetd 상태 확인
@@ -111,7 +110,7 @@ else
     done
   fi
 
-  # 조치 결과 최종 판정 분기점
+  # 최종 판정
   if [ "$FTP_ACTIVE" -eq 0 ]; then
     IS_SUCCESS=1
     REASON_LINE="모든 FTP 서비스 경로(inetd/xinetd/systemd)에서 비활성화 및 마스킹 설정을 적용하여 조치를 완료하여 이 항목에 대해 양호합니다."
@@ -121,7 +120,7 @@ else
   fi
 fi
 
-# 출력 데이터 구성 분기점
+# 출력 데이터 구성
 [ -n "$ACTION_ERR_LOG" ] && add_detail "[Error_Log]\n$ACTION_ERR_LOG"
 CHECK_COMMAND="grep ftp /etc/inetd.conf; grep disable /etc/xinetd.d/ftp; systemctl is-active vsftpd"
 

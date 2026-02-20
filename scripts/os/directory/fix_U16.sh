@@ -27,12 +27,12 @@ TARGET_FILE="/etc/passwd"
 
 ACTION_ERR_LOG=""
 
-# 실행 권한 확인 분기점
+# 실행 권한 확인
 if [ "$(id -u)" -ne 0 ]; then
   ACTION_ERR_LOG="명령 실행 권한이 부족합니다."
 fi
 
-# 대상 파일 존재 여부 확인 분기점
+# 대상 파일 존재 여부 확인
 if [ -f "$TARGET_FILE" ]; then
   MODIFIED=0
 
@@ -40,7 +40,7 @@ if [ -f "$TARGET_FILE" ]; then
   BEFORE_GROUP=$(stat -c "%G" "$TARGET_FILE" 2>/dev/null)
   BEFORE_PERM=$(stat -c "%a" "$TARGET_FILE" 2>/dev/null)
 
-  # 조치 전 권한 형식 검증 분기점
+  # 조치 전 권한 형식 검증
   if ! echo "$BEFORE_PERM" | grep -Eq '^[0-7]{3,4}$'; then
     IS_SUCCESS=0
     REASON_LINE="기존 파일 권한 형식을 확인할 수 없는 이유로 조치에 실패하여 여전히 이 항목에 대해 취약합니다."
@@ -48,7 +48,7 @@ if [ -f "$TARGET_FILE" ]; then
   else
     BEFORE_PERM_DEC=$((8#$BEFORE_PERM))
 
-    # 소유자 및 그룹 변경 수행 분기점
+    # 소유자 및 그룹 변경 수행
     if [ "$BEFORE_OWNER" != "root" ] || [ "$BEFORE_GROUP" != "root" ]; then
       if chown root:root "$TARGET_FILE" 2>/dev/null; then
         MODIFIED=1
@@ -57,7 +57,7 @@ if [ -f "$TARGET_FILE" ]; then
       fi
     fi
 
-    # 파일 권한 변경 수행 분기점
+    # 파일 권한 변경 수행
     NEED_CHMOD=0
     [ $((BEFORE_PERM_DEC & 022)) -ne 0 ] && NEED_CHMOD=1
     [ $((BEFORE_PERM_DEC & 07000)) -ne 0 ] && NEED_CHMOD=1
@@ -75,7 +75,7 @@ if [ -f "$TARGET_FILE" ]; then
     AFTER_GROUP=$(stat -c "%G" "$TARGET_FILE" 2>/dev/null)
     AFTER_PERM=$(stat -c "%a" "$TARGET_FILE" 2>/dev/null)
 
-    # 조치 후 결과 검증 분기점
+    # 조치 후 결과 검증
     if ! echo "$AFTER_PERM" | grep -Eq '^[0-7]{3,4}$'; then
       IS_SUCCESS=0
       REASON_LINE="조치 후 상태 값을 읽어올 수 없는 이유로 조치에 실패하여 여전히 이 항목에 대해 취약합니다."
@@ -88,7 +88,7 @@ if [ -f "$TARGET_FILE" ]; then
       [ $((AFTER_PERM_DEC & 07000)) -eq 0 ] && SPECIAL_OK=1
       [ "$AFTER_PERM" -le 644 ] && LE_OK=1
 
-      # 최종 판정 및 메시지 구성 분기점
+      # 최종 판정 및 메시지 구성
       if [ "$OWNER_OK" -eq 1 ] && [ "$GROUP_OK" -eq 1 ] && [ "$WRITE_OK" -eq 1 ] && [ "$SPECIAL_OK" -eq 1 ] && [ "$LE_OK" -eq 1 ]; then
         IS_SUCCESS=1
         REASON_LINE="파일 소유자와 그룹을 root로 변경하고 권한을 644로 조치를 완료하여 이 항목에 대해 양호합니다."

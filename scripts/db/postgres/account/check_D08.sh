@@ -81,10 +81,10 @@ MD5_RC=$?
 
 REASON_LINE=""
 DETAIL_CONTENT=""
-# 자동 조치 시 접속 불능 위험과 수동 조치 가이드를 변수로 정의
+# 자동 조치 시 접속 불능 위험과 수동 조치 가이드
 GUIDE_LINE="이 항목에 대해서 인증 방식을 강제로 변경하거나 계정 암호를 재설정할 경우, 기존 md5 기반 클라이언트 프로그램이나 암호화 방식이 일치하지 않는 애플리케이션의 데이터베이스 접속이 즉시 차단되어 서비스 중단이 발생할 수 있는 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 확인 후 pg_hba.conf의 md5를 scram-sha-256으로 변경하고, 관련 계정의 비밀번호를 ALTER ROLE <계정명> WITH PASSWORD '<비밀번호>'; 명령을 통해 최신 알고리즘으로 갱신하여 조치해 주시기 바랍니다."
 
-# pg_hba_file_rules 조회 성공 여부에 따른 분기점
+# pg_hba_file_rules 조회 성공 여부
 if [ $MD5_RC -ne 0 ]; then
   STATUS="FAIL"
   REASON_LINE="pg_hba_file_rules 시스템 테이블 조회 권한이 부족하여 인증 규칙을 점검할 수 없습니다."
@@ -109,7 +109,7 @@ else
   NON_SCRAM_DESC="$(format_non_scram "$NON_SCRAM_ROWS")"
   VULN_ACCOUNT_DESC="$(echo "$NON_SCRAM_ROWS" | grep -v "SCRAM-SHA-256" | while IFS='|' read -r role algo; do echo -n "${role}(${algo}), "; done | sed 's/, $//')"
 
-  # 인증 규칙 및 계정 해시 상태에 따른 결과 판정 분기점
+  # 인증 규칙 및 계정 해시 상태에 따른 결과 판정
   if [ -z "$MD5_DESC" ] && [ -z "$VULN_ACCOUNT_DESC" ]; then
     STATUS="PASS"
     REASON_LINE="모든 인증 규칙이 scram-sha-256 이상이며 모든 로그인 계정이 안전한 암호화 알고리즘을 사용하고 있어 이 항목에 대해 양호합니다."
@@ -126,7 +126,7 @@ else
   DETAIL_CONTENT="[인증 및 암호화 알고리즘 설정 현황]\n- md5 인증 규칙: ${MD5_DESC:-없음}\n- 계정별 암호 알고리즘: ${NON_SCRAM_DESC:-없음}"
 fi
 
-# 요구사항 반영한 RAW_EVIDENCE 구조화
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -137,9 +137,10 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# JSON 데이터 이스케이프 및 출력
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

@@ -37,7 +37,6 @@ run_psql() {
   return 1
 }
 
-# 파이썬 대시보드 및 DB에서 줄바꿈이 깨지지 않도록 JSON 문자열을 이스케이프 처리하는 함수
 escape_json_str() {
   echo "$1" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
@@ -48,10 +47,10 @@ HBA_FILE="$(echo "$HBA_FILE" | head -n 1 | xargs)"
 
 REASON_LINE=""
 DETAIL_CONTENT=""
-# 자동 조치 시 운영 계정 잠금 위험과 수동 조치 가이드를 변수로 정의
+# 자동 조치 시 운영 계정 잠금 위험과 수동 조치 가이드
 GUIDE_LINE="이 항목에 대해서 일괄적으로 만료 정책이나 복잡도를 강제 적용할 경우, 기관 정책을 미처 인지하지 못한 운영 계정들이 대거 접속 차단되어 서비스 전체가 중단될 수 있는 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 확인 후 보안 가이드에 따라 ALTER ROLE <계정명> VALID UNTIL '<만료일>'; 명령을 사용하여 사용 기간을 설정하고, 필요 시 PAM 또는 LDAP과 연계하여 비밀번호 복잡도 정책을 조치해 주시기 바랍니다."
 
-# pg_hba.conf 파일 존재 여부 및 접근 권한 확인 분기점
+# pg_hba.conf 파일 존재 여부 및 접근 권한 확인
 if [ -z "$HBA_FILE" ] || [ ! -f "$HBA_FILE" ]; then
   STATUS="FAIL"
   REASON_LINE="데이터베이스 설정 파일(pg_hba.conf)의 경로를 확인할 수 없거나 접근이 제한되어 점검을 수행하지 못했습니다."
@@ -68,7 +67,7 @@ else
     STATUS="PASS"
     REASON_LINE="현재 pg_hba.conf에 외부 인증 방식(${AUTH_METHODS})이 설정되어 있어 이 항목에 대해 양호합니다."
   elif echo "$AUTH_METHODS" | grep -Eq 'password|md5|scram-sha-256'; then
-    # 내부 인증 사용 시 계정별 만료 정책 설정 여부 판단 분기점
+    # 내부 인증 사용 시 계정별 만료 정책 설정 여부 판단
     if [ -z "$NO_EXPIRY_USERS" ]; then
       STATUS="PASS"
       REASON_LINE="내부 인증 방식(${AUTH_METHODS})을 사용 중이나 모든 로그인 계정에 만료 정책이 설정되어 있어 이 항목에 대해 양호합니다."
@@ -91,7 +90,7 @@ fi
 CHECK_COMMAND="psql -c \"SHOW hba_file; SELECT rolname FROM pg_roles WHERE rolvaliduntil IS NULL;\""
 TARGET_FILE="$HBA_FILE"
 
-# 요구사항에 맞춘 RAW_EVIDENCE JSON 데이터 구조화
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -102,10 +101,10 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# 파이썬/DB 호환을 위한 최종 이스케이프 처리
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE")"
 
-# 최종 결과 JSON 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

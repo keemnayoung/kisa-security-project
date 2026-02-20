@@ -42,7 +42,7 @@ DETAIL_CONTENT=""
 # 자동 조치 시 애플리케이션 접속 라이브러리 호환성 문제로 인한 서비스 중단 위험성 정의
 GUIDE_LINE="이 항목에 대해서 인증 플러그인을 자동으로 변경할 경우, SHA-256 방식을 지원하지 않는 구버전 클라이언트나 애플리케이션 라이브러리에서 DB 접속 서버 연결이 차단되는 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 확인 후 사용 중인 애플리케이션의 커넥터 버전을 점검하고, ALTER USER 명령을 통해 caching_sha2_password와 같은 안전한 알고리즘으로 변경하여 조치해 주시기 바랍니다."
 
-# 쿼리 실행 결과(성공, 타임아웃, 접속 에러)에 따른 판정 분기점
+# 쿼리 실행 결과(성공, 타임아웃, 접속 에러)에 따른 판정
 if [ $RET_CODE -eq 124 ]; then
     STATUS="FAIL"
     REASON_LINE="데이터베이스 응답 지연으로 인해 암호화 알고리즘 정보를 조회할 수 없어 점검을 완료하지 못했습니다."
@@ -56,7 +56,7 @@ else
     # MySQL 8.0 기준 권고 방식인 caching_sha2_password를 양호 기준으로 설정
     WEAK_USERS=$(echo "$RESULT" | awk '$3!="caching_sha2_password"{print $1"@"$2"["$3"]"}')
     
-    # 전체 계정 설정 현황 생성 (DETAIL_CONTENT용)
+    # 전체 계정 설정 현황
     ALL_USERS_INFO=$(echo "$RESULT" | awk '{print "- "$1"@"$2"["$3"]"}' | sed ':a;N;$!ba;s/\n/\\n/g')
     DETAIL_CONTENT="[현재 계정별 인증 플러그인 설정 현황]\n${ALL_USERS_INFO}"
 
@@ -71,7 +71,7 @@ else
     fi
 fi
 
-# 증적 데이터를 JSON 형식으로 구조화
+# raw_evidence 구성
 CHECK_COMMAND="mysql -N -s -B -e \"$QUERY\""
 RAW_EVIDENCE=$(cat <<EOF
 {
@@ -83,12 +83,12 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# 파이썬 대시보드 및 DB에서 줄바꿈(\n)이 정상적으로 유지되도록 이스케이프 처리
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 결과값 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

@@ -30,7 +30,7 @@ FOUND_VULN="N"
 # 점검 결과 라인(현재 설정값 전체)
 ALL_LINES=""
 
-# 취약 라인(취약 설정만)
+# 취약 라인
 VULN_LINES=""
 
 # /etc/passwd 홈 디렉터리 목록(추가 사용자 디렉터리 탐지용)
@@ -97,7 +97,7 @@ else
   REASON_LINE="각 홈 디렉터리의 owner가 해당 user와 일치하고 other 쓰기 권한(o+w)이 제거된 상태로 이 항목에 대해 양호합니다."
 fi
 
-# 수동 조치 안내(자동 조치 위험 + 조치 방법)
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE=$(
   cat <<'EOF'
 자동으로 소유자/권한을 변경하면 기존에 공유 목적으로 사용되던 홈 디렉터리 접근이 차단되거나 서비스/배치/스크립트가 파일을 쓰지 못해 장애가 발생할 수 있어 수동 조치가 필요합니다.
@@ -105,7 +105,7 @@ GUIDE_LINE=$(
 EOF
 )
 
-# raw_evidence 구성(detail: 1문장 + 현재 설정값 전체)
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

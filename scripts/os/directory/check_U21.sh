@@ -25,19 +25,19 @@ TARGET_FILES=()
 FOUND_ANY="N"
 FOUND_VULN="N"
 
-# 현재 설정값(양호/취약 공통 출력)
+# 현재 설정값
 DETAIL_CONTENT=""
 
-# 취약 이유(취약인 경우에만: 취약 설정만 포함)
+# 취약 이유
 VULN_REASON_ITEMS=""
 
-# 존재하지 않는 파일 표시(참고용)
+# 존재하지 않는 파일 표시
 NOT_FOUND_ITEMS=""
 
-# target_file(존재 파일은 실제 존재 파일만, 없으면 빈 값)
+# target_file
 TARGET_FILE=""
 
-# 대시보드/DB 저장을 고려하여 multi-line command로 구성
+# 점검 명령
 CHECK_COMMAND=$(cat <<'EOF'
 for f in /etc/syslog.conf /etc/rsyslog.conf; do
   if [ -f "$f" ]; then
@@ -58,7 +58,7 @@ for FILE in "${LOG_FILES[@]}"; do
     OWNER=$(stat -c %U "$FILE" 2>/dev/null)
     PERM=$(stat -c %a "$FILE" 2>/dev/null)
 
-    # 현재 설정값 누적(양호/취약 공통)
+    # 현재 설정값 누적
     DETAIL_CONTENT="${DETAIL_CONTENT}file=$FILE
 owner=$OWNER
 perm=$PERM
@@ -70,14 +70,14 @@ perm=$PERM
       STATUS="FAIL"
       FOUND_VULN="Y"
 
-      # 취약 이유에는 취약 설정만(한 문장용) 누적
+      # 취약 설정 누적
       if [ -n "$VULN_REASON_ITEMS" ]; then
         VULN_REASON_ITEMS="${VULN_REASON_ITEMS}, "
       fi
       VULN_REASON_ITEMS="${VULN_REASON_ITEMS}${FILE} owner=${OWNER} perm=${PERM}"
     fi
   else
-    # 파일 미존재 정보(참고)
+    # 파일 미존재 정보
     if [ -n "$NOT_FOUND_ITEMS" ]; then
       NOT_FOUND_ITEMS="${NOT_FOUND_ITEMS}, "
     fi
@@ -85,26 +85,25 @@ perm=$PERM
   fi
 done
 
-# 분기 1) 대상 파일이 하나도 없을 때(점검대상 없음 처리)
+# 점검 대상 파일 없음
 if [ "$FOUND_ANY" = "N" ]; then
   STATUS="PASS"
   TARGET_FILE=""
 
-  # 이유(1문장) + DETAIL_CONTENT(현재 설정값)
   REASON_SENTENCE="/etc/syslog.conf 및 /etc/rsyslog.conf 파일이 존재하지 않아 점검대상 없음으로 판단되어 이 항목에 대해 양호합니다."
   DETAIL_CONTENT="file_not_found: ${NOT_FOUND_ITEMS}"
 
 else
-  # 분기 2) 존재 파일 목록 구성(공백 연결)
+  # 분기 2) 존재 파일 목록 구성
   TARGET_FILE=$(printf "%s " "${TARGET_FILES[@]}" | sed 's/[[:space:]]*$//')
 
-  # 양호/취약에 따른 이유 문장 구성(줄바꿈 없이 1문장)
+  # 양호/취약에 따른 이유 문장 구성
   if [ "$FOUND_VULN" = "Y" ]; then
-    # 취약: 취약 설정만 이유에 포함
+    # 취약
     REASON_SENTENCE="${VULN_REASON_ITEMS}로 설정되어 이 항목에 대해 취약합니다."
 
   else
-    # 양호: 존재하는 파일들의 설정값을 이유에 포함(한 문장)
+    # 양호
     OK_ITEMS=""
     for FILE in "${TARGET_FILES[@]}"; do
       OWNER=$(stat -c %U "$FILE" 2>/dev/null)
@@ -118,7 +117,7 @@ else
   fi
 fi
 
-    # 취약 시 자동 조치 가정 가이드 + 주의사항(줄바꿈 구분)
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE=$(cat <<EOF
 자동 조치:
 /etc/(r)syslog.conf 파일의 소유자를 root(또는 bin/sys는 유지)로 설정하고 권한을 640으로 변경합니다.
@@ -127,7 +126,6 @@ GUIDE_LINE=$(cat <<EOF
 EOF
 )
 
-# detail은 "이유 1문장\n현재 설정값" 형태로 구성(줄바꿈 유지)
 REASON_LINE="${REASON_SENTENCE}"
 DETAIL_PAYLOAD="${REASON_LINE}
 ${DETAIL_CONTENT}"

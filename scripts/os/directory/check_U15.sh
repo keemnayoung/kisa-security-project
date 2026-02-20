@@ -32,29 +32,29 @@ ORPHAN_FILES_RAW=$(find / \
   \( -nouser -o -nogroup \) \
   -ls 2>/dev/null)
 
-# 결과 분기: 취약/양호 판단 및 RAW_EVIDENCE 구성 요소 생성
+# 취약/양호 판단 및 RAW_EVIDENCE 구성 요소 생성
 if [ -n "$ORPHAN_FILES_RAW" ]; then
   STATUS="FAIL"
 
-  # 취약 사유(1문장): 취약한 설정(발견된 항목) 일부만 포함
+  # 취약 사유: 취약한 설정(발견된 항목) 일부만 포함
   VULN_SNIP=$(echo "$ORPHAN_FILES_RAW" | head -n 1 | sed ':a;N;$!ba;s/\n/ | /g')
   REASON_LINE="find 결과에서 -nouser/-nogroup 항목이 확인됩니다(${VULN_SNIP}) 등으로 이 항목에 대해 취약합니다."
 
-  # 현재 설정값(전체): 발견된 항목 전체를 제공
+  # 현재 설정: 발견된 항목 전체
   DETAIL_CONTENT="$ORPHAN_FILES_RAW"
 
   
 else
   STATUS="PASS"
 
-  # 양호 사유(1문장): 현재 값(none)만으로 자연스럽게 구성
+  # 양호 사유: 현재 값(none)만으로 자연스럽게 구성
   REASON_LINE="find 결과에서 -nouser/-nogroup 항목이 확인되지 않습니다(none)로 이 항목에 대해 양호합니다."
 
-  # 현재 설정값(전체): 현재 결과값만 제공
+  # 현재 설정값: 현재 결과값만
   DETAIL_CONTENT="none"
 fi
 
-# raw_evidence 구성 (모든 값은 줄바꿈 가능하게 구성)
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -66,7 +66,7 @@ $DETAIL_CONTENT",
 EOF
 )
 
-# JSON escape 처리 (따옴표, 줄바꿈) - DB 저장/재조회 시 줄바꿈 복원 가능
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')

@@ -37,7 +37,7 @@ run_psql() {
   return 1
 }
 
-# 파이썬 대시보드 및 DB 연동 시 줄바꿈과 특수문자가 깨지지 않도록 처리하는 함수
+
 escape_json_str() {
   echo "$1" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
@@ -56,7 +56,7 @@ DETAIL_CONTENT=""
 # 자동 조치 시 관리용 스크립트 차단 위험과 수동 조치 가이드를 변수로 정의
 GUIDE_LINE="이 항목에 대해서 관리자 계정의 비밀번호를 자동 생성된 값으로 변경할 경우, 해당 계정을 통해 DB를 관리하는 스크립트나 백업 도구가 즉시 차단되어 운영 및 유지보수 작업에 장애가 발생할 수 있는 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 확인 후 비밀번호가 설정되지 않은 관리자 계정에 대해 ALTER ROLE <계정명> WITH PASSWORD '<강력한_비밀번호>'; 명령을 사용하여 조치해 주시기 바랍니다."
 
-# DB 접속 상태 및 권한 조회 가능 여부에 따른 분기점
+# DB 접속 상태 및 권한 조회 가능 여부
 if [ $RC -ne 0 ]; then
   STATUS="FAIL"
   REASON_LINE="데이터베이스 시스템 테이블 접근 권한 문제로 관리자 계정의 설정 상태를 확인할 수 없어 점검을 수행하지 못했습니다."
@@ -65,7 +65,7 @@ else
   # 조회된 관리자 계정들 중 비밀번호 미설정(취약) 건수 파악
   VULN_USERS=$(echo "$SUPER_USERS_INFO" | grep "NO_PASSWORD" | cut -d'|' -f1)
 
-  # 점검 결과(양호/취약) 판정 및 문구 생성 분기점
+  # 점검 결과(양호/취약) 판정 및 문구 생성
   if [ -z "$VULN_USERS" ]; then
     STATUS="PASS"
     REASON_LINE="모든 관리자(SUPERUSER) 계정에 비밀번호가 설정되어 있어 이 항목에 대해 양호합니다."
@@ -83,7 +83,7 @@ fi
 CHECK_COMMAND="psql -c \"SELECT usename FROM pg_shadow JOIN pg_roles WHERE rolsuper = true...\""
 TARGET_FILE="pg_shadow"
 
-# RAW_EVIDENCE 데이터 구조화
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -94,9 +94,10 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# JSON 데이터 이스케이프 및 출력
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

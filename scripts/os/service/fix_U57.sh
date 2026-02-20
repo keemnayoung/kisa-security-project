@@ -15,7 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 설정 분기점
+# 기본 변수 설정
 ID="U-57"
 ACTION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 IS_SUCCESS=0
@@ -25,7 +25,7 @@ DETAIL_CONTENT=""
 TARGET_FILE=""
 ACTION_ERR_LOG=""
 
-# 유틸리티 함수 정의 분기점
+# 유틸리티 함수 정의
 add_detail(){ [ -n "${1:-}" ] && DETAIL_CONTENT="${DETAIL_CONTENT}${DETAIL_CONTENT:+\\n}$1"; }
 add_err(){ [ -n "${1:-}" ] && ACTION_ERR_LOG="${ACTION_ERR_LOG}${ACTION_ERR_LOG:+\\n}$1"; }
 add_file(){
@@ -70,7 +70,7 @@ restart_if_exist(){
   systemctl restart "$unit" >/dev/null 2>&1 || add_err "${unit} 재시작 실패"
 }
 
-# 권한 확인 분기점
+# 권한 확인
 if [ "${EUID:-$(id -u)}" -ne 0 ]; then
   REASON_LINE="root 권한이 아니어서 FTP 서비스의 root 계정 접속 제한 설정을 적용할 수 없어 조치를 중단합니다."
   DETAIL_CONTENT="current_user: $(id -un)"
@@ -87,9 +87,9 @@ PF_CONF=""
 [ -f /etc/proftpd/proftpd.conf ] && PF_CONF="/etc/proftpd/proftpd.conf"
 [ -z "$PF_CONF" ] && [ -f /etc/proftpd.conf ] && PF_CONF="/etc/proftpd.conf"
 
-# 조치 수행 분기점
+# 조치 수행
 if [ "$goto_finalize" -eq 0 ]; then
-  # vsftpd 조치 분기점
+  # vsftpd 조치
   if command -v vsftpd >/dev/null 2>&1 || [ -n "$VS_CONF" ]; then
     if [ -n "$VS_CONF" ] && [ -f "$VS_CONF" ]; then
       add_file "$VS_CONF"
@@ -114,7 +114,7 @@ if [ "$goto_finalize" -eq 0 ]; then
     fi
   fi
 
-  # proftpd 조치 분기점
+  # proftpd 조치
   if command -v proftpd >/dev/null 2>&1 || [ -n "$PF_CONF" ]; then
     if [ -n "$PF_CONF" ] && [ -f "$PF_CONF" ]; then
       add_file "$PF_CONF"
@@ -130,7 +130,7 @@ if [ "$goto_finalize" -eq 0 ]; then
     fi
   fi
 
-  # 공통 ftpusers 파일 조치 분기점
+  # 공통 ftpusers 파일 조치
   for f in /etc/ftpusers /etc/ftpd/ftpusers; do
     if [ -f "$f" ]; then
       add_file "$f"
@@ -138,7 +138,7 @@ if [ "$goto_finalize" -eq 0 ]; then
     fi
   done
 
-  # 조치 후 상태 수집 및 검증 분기점
+  # 조치 후 상태 수집 및 검증 
   OK=1
   if [ -n "$VS_CONF" ] && [ -f "$VS_CONF" ]; then
     ULE="$(upper "$(conf_kv "$VS_CONF" userlist_enable)")"; ULD="$(upper "$(conf_kv "$VS_CONF" userlist_deny)")"
@@ -175,7 +175,7 @@ if [ "$goto_finalize" -eq 0 ]; then
     fi
   fi
 
-  # 최종 판정 분기점
+  # 최종 판정
   if [ "$OK" -eq 1 ] && [ -z "$ACTION_ERR_LOG" ]; then
     IS_SUCCESS=1
     REASON_LINE="FTP 서비스 설정 파일 및 ftpusers 명단에 root 계정을 차단하도록 설정을 적용하여 조치를 완료하여 이 항목에 대해 양호합니다."
@@ -185,10 +185,11 @@ if [ "$goto_finalize" -eq 0 ]; then
   fi
 fi
 
-# 결과 데이터 출력 분기점
+# 결과 데이터 출력
 [ -n "$ACTION_ERR_LOG" ] && add_detail "[Error_Log]\n$ACTION_ERR_LOG"
 [ -z "$TARGET_FILE" ] && TARGET_FILE="/etc/ftpusers, /etc/vsftpd.conf, /etc/proftpd.conf"
 
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

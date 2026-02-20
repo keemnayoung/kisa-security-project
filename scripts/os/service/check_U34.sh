@@ -37,7 +37,7 @@ DETAIL_CONTENT=""
 VULN=0
 DETAIL_LINES=""
 
-# 1) inetd 기반 점검: 주석 제외 영역에서 finger 라인이 존재하면 취약
+# inetd 점검: 주석 제외 영역에서 finger 라인이 존재하면 취약
 if [ -f "$INETD_CONF" ]; then
   INETD_ACTIVE_LINES=$(grep -nEv "^[[:space:]]*#" "$INETD_CONF" 2>/dev/null | grep -nE "^[[:space:]]*finger([[:space:]]|$)" || true)
   if [ -n "$INETD_ACTIVE_LINES" ]; then
@@ -51,7 +51,7 @@ else
   DETAIL_LINES+="$INETD_CONF: 파일 없음\n"
 fi
 
-# 2) xinetd 기반 점검: 파일이 존재할 때 disable=yes가 명시되지 않으면 취약
+# xinetd 점검: 파일이 존재할 때 disable=yes가 명시되지 않으면 취약
 if [ -f "$XINETD_FINGER" ]; then
   # CRLF(\r) 제거 후 검사
   DISABLE_LINE_RAW=$(
@@ -75,7 +75,7 @@ else
   DETAIL_LINES+="$XINETD_FINGER: 파일 없음\n"
 fi
 
-# 3) systemd 기반 점검: finger 유닛이 enabled/active면 취약
+# systemd 점검: finger 유닛이 enabled/active면 취약
 if command -v systemctl >/dev/null 2>&1; then
   HAS_FINGER_UNIT=$(systemctl list-unit-files 2>/dev/null | awk 'tolower($1) ~ /^finger\.(socket|service)$/{print $1}' | head -n 1 || true)
   if [ -n "$HAS_FINGER_UNIT" ]; then
@@ -98,15 +98,15 @@ else
   DETAIL_LINES+="systemctl: 사용 불가\n"
 fi
 
-# DETAIL_CONTENT: 양호/취약과 관계 없이 현재 설정값 전체
+# DETAIL_CONTENT 구성
 DETAIL_CONTENT="$(printf "%b" "$DETAIL_LINES" | sed 's/[[:space:]]*$//')"
 
-# REASON_LINE: 첫 문장에 들어갈 "어떠한 이유"(양호=양호 설정만, 취약=취약 설정만)
+# REASON_LINE 구성
 if [ "$VULN" -eq 1 ]; then
   STATUS="FAIL"
   REASON_PARTS=""
 
-  # 취약 근거(취약한 설정만)
+  # 취약 근거
   if [ -f "$INETD_CONF" ]; then
     INETD_ACTIVE_LINES=$(grep -nEv "^[[:space:]]*#" "$INETD_CONF" 2>/dev/null | grep -nE "^[[:space:]]*finger([[:space:]]|$)" || true)
     if [ -n "$INETD_ACTIVE_LINES" ]; then
@@ -150,7 +150,7 @@ else
   STATUS="PASS"
   GOOD_PARTS=""
 
-  # 양호 근거(양호 설정만)
+  # 양호 근거
   if [ -f "$INETD_CONF" ]; then
     INETD_ACTIVE_LINES=$(grep -nEv "^[[:space:]]*#" "$INETD_CONF" 2>/dev/null | grep -nE "^[[:space:]]*finger([[:space:]]|$)" || true)
     if [ -z "$INETD_ACTIVE_LINES" ]; then
@@ -199,8 +199,6 @@ else
 
 fi
 
-# detail 첫 문장: 어떠한 이유 때문에 양호/취약합니다. (한 문장, 줄바꿈 없음)
-# REASON_LINE은 내부에 줄바꿈이 있을 수 있으므로 첫 문장에서는 공백으로 정리
 REASON_ONE_LINE="$(printf "%s" "$REASON_LINE" | tr '\n' ' ' | sed 's/[[:space:]]\+/ /g' | sed 's/[[:space:]]*$//')"
 if [ "$STATUS" = "PASS" ]; then
   DETAIL_HEAD="${REASON_ONE_LINE} 때문에 이 항목에 대해 양호합니다."
@@ -208,6 +206,7 @@ else
   DETAIL_HEAD="${REASON_ONE_LINE} 때문에 이 항목에 대해 취약합니다."
 fi
 
+# 취약 가정 자동 조치
 GUIDE_LINE="$(cat <<EOF
 자동 조치:
 $INETD_CONF 에서 finger 활성 라인을 주석 처리하고 $XINETD_FINGER 에 disable = yes 를 표준화하며 finger.socket/finger.service 가 있으면 stop/disable/mask 합니다.
@@ -216,7 +215,7 @@ $INETD_CONF 에서 finger 활성 라인을 주석 처리하고 $XINETD_FINGER �
 EOF
 )"
 
-# raw_evidence 구성 (문장 단위 줄바꿈 유지되도록 \n 포함)
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -232,7 +231,7 @@ RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# scan_history 저장용 JSON 출력 (JSON 직전 공백 라인 1줄 필수)
+# scan_history 저장용 JSON 출력 
 echo ""
 cat <<EOF
 {

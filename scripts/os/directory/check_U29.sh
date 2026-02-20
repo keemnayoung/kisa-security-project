@@ -56,6 +56,7 @@ else
     else
       DETAIL_CONTENT="type=$FILE_TYPE"$'\n'"owner=$OWNER"$'\n'"perm=$PERM"
 
+      #소유자와 권한 확인
       if [ "$OWNER" = "root" ] && [ "$PERM" -le 600 ]; then
         STATUS="PASS"
         REASON_LINE="owner=root, perm=$PERM(600 이하)로 설정되어 이 항목에 대해 양호합니다."
@@ -79,13 +80,11 @@ else
   fi
 fi
 
-# 취약 시 자동 조치 가이드/주의사항 구성
-if [ "$STATUS" = "FAIL" ]; then
-  GUIDE_LINE="자동 조치:
-  /etc/hosts.lpd 파일을 제거하거나, 불가피하게 사용 시 소유자/그룹을 root:root로 변경하고 권한을 600으로 설정합니다.
-  주의사항: 
-  레거시 LPD/프린트 서비스에서 해당 파일을 사용하는 경우 파일 제거 또는 권한 변경으로 인쇄/접근 제어 동작에 영향이 있을 수 있으므로 서비스 사용 여부를 확인한 후 적용합니다."
-fi
+# 취약 가정 자동 조치
+GUIDE_LINE="자동 조치:
+/etc/hosts.lpd 파일을 제거하거나, 불가피하게 사용 시 소유자/그룹을 root:root로 변경하고 권한을 600으로 설정합니다.
+주의사항: 
+레거시 LPD/프린트 서비스에서 해당 파일을 사용하는 경우 파일 제거 또는 권한 변경으로 인쇄/접근 제어 동작에 영향이 있을 수 있으므로 서비스 사용 여부를 확인한 후 적용합니다."
 
 # raw_evidence 구성(각 값은 문장/항목을 줄바꿈으로 구분)
 RAW_EVIDENCE=$(cat <<EOF

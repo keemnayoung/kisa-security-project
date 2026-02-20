@@ -67,7 +67,7 @@ TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 MODIFIED=0
 FAIL_FLAG=0
 
-# 유틸리티 함수 정의 분기점
+# 유틸리티 함수 정의
 append_err() {
   if [ -n "$ACTION_ERR_LOG" ]; then
     ACTION_ERR_LOG="${ACTION_ERR_LOG}\n$1"
@@ -159,7 +159,7 @@ verify_dir_max() {
   fi
 }
 
-# 실행 권한 사전 체크 분기점
+# 실행 권한 사전 체크
 if [ "$(id -u)" -ne 0 ]; then
   IS_SUCCESS=0
   REASON_LINE="root 권한이 아니어서 crontab 및 at 관련 파일 권한 조치를 수행할 수 없는 이유로 조치에 실패하여 여전히 이 항목에 대해 취약합니다."
@@ -185,7 +185,7 @@ EOF
   exit 1
 fi
 
-# 1) 명령어 파일 조치 분기점
+# 1) 명령어 파일 조치
 if [ -f "$CRONTAB_CMD" ]; then
   cp -a "$CRONTAB_CMD" "${CRONTAB_CMD}.bak_${TIMESTAMP}" 2>/dev/null || true
   ensure_owner_root_root "$CRONTAB_CMD"
@@ -202,7 +202,7 @@ if [ -f "$AT_CMD" ]; then
   MODIFIED=1
 fi
 
-# 2) Cron 스풀 디렉터리 조치 분기점
+# 2) Cron 스풀 디렉터리 조치
 for dir in "${CRON_SPOOL_DIRS[@]}"; do
   if [ -d "$dir" ]; then
     ensure_owner_root_root "$dir"
@@ -216,7 +216,7 @@ for dir in "${CRON_SPOOL_DIRS[@]}"; do
   fi
 done
 
-# 3) /etc/crontab 조치 분기점
+# 3) /etc/crontab 조치
 for f in "${CRON_ETC_FILES[@]}"; do
   if [ -f "$f" ]; then
     cp -a "$f" "${f}.bak_${TIMESTAMP}" 2>/dev/null || true
@@ -226,7 +226,7 @@ for f in "${CRON_ETC_FILES[@]}"; do
   fi
 done
 
-# 4) /etc/cron.d 등 디렉터리 조치 분기점
+# 4) /etc/cron.d 등 디렉터리 조치
 for d in "${CRON_ETC_DIRS[@]}"; do
   if [ -d "$d" ]; then
     ensure_owner_root_root "$d"
@@ -240,7 +240,7 @@ for d in "${CRON_ETC_DIRS[@]}"; do
   fi
 done
 
-# 5) At 스풀 디렉터리 조치 분기점
+# 5) At 스풀 디렉터리 조치
 for dir in "${AT_SPOOL_DIRS[@]}"; do
   if [ -d "$dir" ]; then
     ensure_owner_root_root "$dir"
@@ -254,7 +254,7 @@ for dir in "${AT_SPOOL_DIRS[@]}"; do
   fi
 done
 
-# 6) 접근제어 파일 조치 분기점
+# 6) 접근제어 파일 조치
 if [ -f "$CRON_DENY" ]; then
   rm -f "$CRON_DENY" 2>/dev/null && MODIFIED=1
 fi
@@ -271,7 +271,7 @@ ensure_owner_root_root "$AT_ALLOW"
 ensure_mode "$AT_ALLOW" 640
 MODIFIED=1
 
-# 7) 조치 후 검증 및 상태 수집 분기점
+# 7) 조치 후 검증 및 상태 수집
 verify_file_max "$CRONTAB_CMD" 750
 verify_file_max "$AT_CMD" 750
 
@@ -296,7 +296,7 @@ verify_file_max "$AT_ALLOW" 640
 [ -f "$CRON_DENY" ] && { append_detail "$CRON_DENY: exists"; FAIL_FLAG=1; }
 [ -f "$AT_DENY" ] && { append_detail "$AT_DENY: exists"; FAIL_FLAG=1; }
 
-# 최종 판정 및 REASON_LINE 확정 분기점
+# 최종 판정 및 REASON_LINE 확정
 if [ "$FAIL_FLAG" -eq 0 ]; then
   IS_SUCCESS=1
   REASON_LINE="crontab 및 at 관련 파일의 소유자를 root로 변경하고 권한을 기준에 맞게 제한하여 조치를 완료하여 이 항목에 대해 양호합니다."
@@ -309,7 +309,7 @@ if [ -n "$ACTION_ERR_LOG" ]; then
   DETAIL_CONTENT="${DETAIL_CONTENT}\n[Error_Log]\n${ACTION_ERR_LOG}"
 fi
 
-# RAW_EVIDENCE 구성 분기점
+# RAW_EVIDENCE 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -321,7 +321,7 @@ EOF
 
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 결과 출력 분기점
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

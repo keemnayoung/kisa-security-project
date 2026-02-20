@@ -55,7 +55,7 @@ REASON_LINE=""
 DETAIL_CONTENT=""
 GUIDE_LINE="자동 조치 시 비밀번호 설정 미비 및 권한 설정 오류가 발생할 위험이 존재하여 수동 조치가 필요합니다. 관리자가 직접 확인 후 root 계정의 비밀번호 설정 및 원격 접속 제한을 적용해 주시기 바랍니다."
 
-# 2) 실행 실패 분기(타임아웃/접속 오류)
+# 2) 실행 실패 (타임아웃/접속 오류)
 if [[ "$ACCOUNT_INFO" == "ERROR_TIMEOUT" ]]; then
   STATUS="FAIL"
   REASON_LINE="MySQL 조회가 ${MYSQL_TIMEOUT_SEC}초를 초과하여 점검을 완료하지 못했습니다."
@@ -69,7 +69,7 @@ else
   ROOT_COUNT=0
   REASONS=()
 
-  # 3) 결과 파싱 분기(익명/루트 계정 위험요소만 체크)
+  # 3) 결과 파싱 (익명/루트 계정 위험요소만 체크)
   while IFS=$'\t' read -r user host auth locked; do
     [[ -z "$user" && -z "$host" ]] && continue
 
@@ -126,6 +126,7 @@ CHECK_COMMAND="$MYSQL_CMD_BASE \"$QUERY_PRIMARY\" (fallback: \"$QUERY_FALLBACK1\
 # 원문 결과 포함(과다 출력 우려 시 head -n 적용 가능)
 DETAIL_CONTENT="${DETAIL_CONTENT}; account_info=${ACCOUNT_INFO}"
 
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -135,11 +136,12 @@ RAW_EVIDENCE=$(cat <<EOF
 }
 EOF
 )
-
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

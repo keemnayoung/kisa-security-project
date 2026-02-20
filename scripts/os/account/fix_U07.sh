@@ -33,7 +33,7 @@
 #     cp -p "$TARGET_FILE" "/etc/passwd_bak_$TIMESTAMP"
 #     [ -f "/etc/shadow" ] && cp -p "/etc/shadow" "/etc/shadow_bak_$TIMESTAMP"
 
-#     # 2. 계정 삭제 수행
+#     # 계정 삭제 수행
 #     REMOVED_LIST=()
 #     for acc in "${UNUSED_ACCOUNTS[@]}"; do
 #         if id "$acc" >/dev/null 2>&1; then
@@ -44,7 +44,7 @@
 #         fi
 #     done
 
-#     # 3. [핵심 검증] 조치 후 실제 계정이 남아있는지 재검사
+#     # [핵심 검증] 조치 후 실제 계정이 남아있는지 재검사
 #     STILL_EXISTS=0
 #     for acc in "${UNUSED_ACCOUNTS[@]}"; do
 #         if grep -q "^${acc}:" "$TARGET_FILE"; then
@@ -52,7 +52,7 @@
 #         fi
 #     done
 
-#     # 4. 결과 판정
+#     # 결과 판정
 #     if [ "$STILL_EXISTS" -eq 0 ]; then
 #         ACTION_RESULT="SUCCESS"
 #         STATUS="PASS"
@@ -72,7 +72,7 @@
 #     ACTION_LOG="계정 정보 파일($TARGET_FILE)이 존재하지 않아 자동 삭제 조치를 수행할 수 없습니다."
 # fi
 
-# # 5. 표준 JSON 출력
+# # 표준 JSON 출력
 # echo ""
 # cat << EOF
 # {

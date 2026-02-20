@@ -27,7 +27,6 @@ ALLOWED_OBJECT_OWNERS="${ALLOWED_OBJECT_OWNERS:-postgres}"
 SQL_LIST=$(printf "'%s'," $(echo "$ALLOWED_OBJECT_OWNERS" | tr ',' ' '))
 SQL_LIST=${SQL_LIST%,}
 
-# 파이썬 대시보드 및 DB 연동 시 줄바꿈(\n) 유지를 위한 이스케이프 함수
 escape_json_str() {
   echo "$1" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
@@ -49,7 +48,7 @@ DETAIL_CONTENT=""
 # 자동 조치 시 소유권 변경으로 인한 애플리케이션의 객체 접근/관리 권한 유실 위험 및 조치 가이드
 GUIDE_LINE="이 항목에 대해서 객체 소유자를 자동으로 변경할 경우, 기존에 해당 객체를 생성하고 관리하던 응용 프로그램 계정이 소유권 기반의 DDL 수행 권한을 잃게 되어 패치나 운영 작업 중 장애가 발생할 수 있는 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 확인 후 ALTER TABLE ... OWNER TO ... 명령어를 사용하여 비인가된 객체 소유권을 인가된 관리자 계정으로 수동 조치해 주시기 바랍니다."
 
-# 쿼리 실행 결과 및 비인가 소유자 존재 여부에 따른 판정 분기점
+# 쿼리 실행 결과 및 비인가 소유자 존재 여부
 if [ $RC -ne 0 ]; then
   STATUS="FAIL"
   REASON_LINE="객체 소유자 정보를 조회하지 못하여 점검을 수행할 수 없습니다."
@@ -75,7 +74,7 @@ SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 CHECK_COMMAND="pg_class/pg_namespace 기반 비시스템 스키마 객체의 소유자 허용 목록 외 점검"
 TARGET_FILE="pg_class.relowner"
 
-# 요구사항에 맞춘 RAW_EVIDENCE 구조화 및 JSON 이스케핑
+# raw_evidence 구성
 RAW_EVIDENCE_JSON=$(cat <<EOF
 {
   "command": "$(escape_json_str "$CHECK_COMMAND")",
@@ -86,9 +85,10 @@ RAW_EVIDENCE_JSON=$(cat <<EOF
 EOF
 )
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE_JSON")"
 
-# 최종 결과 JSON 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

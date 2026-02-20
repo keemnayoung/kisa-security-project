@@ -36,20 +36,19 @@ json_escape() {
   echo "$1" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g'
 }
 
-# 분기: 점검 대상 파일 존재 여부 확인
+# 점검 대상 파일 존재 여부 확인
 if [ ! -f "$TARGET_FILE" ]; then
   STATUS="FAIL"
   FOUND_VULN="Y"
   REASON_LINE="(/etc/passwd) 파일이 없어 현재 설정을 확인할 수 있어 이 항목에 대해 취약합니다."
   DETAIL_CONTENT="passwd_file_missing"
 else
-  # 분기: /etc/passwd 기준 로그인 가능 계정의 홈 디렉터리 설정 및 실제 존재 여부 점검
+  # /etc/passwd 기준 로그인 가능 계정의 홈 디렉터리 설정 및 실제 존재 여부 점검
   while IFS=: read -r username _ uid _ _ homedir shell; do
     case "$shell" in
       */nologin|*/false) continue ;;
     esac
 
-    # 현재 설정값(로그인 가능 계정)은 양호/취약과 관계 없이 모두 DETAIL_CONTENT에 포함
     state="exists"
     if [ -z "$homedir" ] || [ "$homedir" = "-" ] || [[ "$homedir" != /* ]]; then
       state="invalid_home"
@@ -66,7 +65,6 @@ else
 
   DETAIL_CONTENT="$(printf "%s\n" "${ALL_LOGIN_USERS[@]}" | sed 's/[[:space:]]*$//')"
 
-  # 분기: 취약/양호에 따른 reason 문장(1문장) 구성
   if [ "$FOUND_VULN" = "Y" ]; then
     STATUS="FAIL"
     IFS=", " VULN_JOINED="${MISSING_HOME_USERS[*]}" ; unset IFS
@@ -77,9 +75,10 @@ else
   fi
 fi
 
-# raw_evidence 구성: 각 값은 문장/라인 단위 줄바꿈 가능하도록 \n 포함
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="이 항목에 대해서 잘못된 홈 디렉터리 조치(계정 삭제, 홈 디렉터리 임의 생성/소유권 변경)로 서비스 계정이나 배치 작업 경로가 바뀌어 장애가 발생할 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 해당 계정의 사용 여부를 확인한 후 불필요하면 userdel로 계정을 제거하고, 사용 중이면 홈 디렉터리를 생성/할당하거나 /etc/passwd의 홈 경로를 올바르게 수정해 주시기 바랍니다."
 
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

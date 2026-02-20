@@ -15,7 +15,7 @@
 # @Reference   : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 초기화 분기점
+# 기본 변수
 ID="U-30"
 ACTION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 IS_SUCCESS=0
@@ -43,12 +43,13 @@ TARGET_FILE="/etc/profile
 /etc/bashrc
 /etc/login.defs"
 
+# 점검 명령
 CHECK_COMMAND="( [ -f /etc/profile ] && grep -inE '^[[:space:]]*umask[[:space:]]+[0-9]+' /etc/profile | tail -n 3 || echo 'profile_not_found' ) ; \
 ( ls -1 /etc/profile.d/*.sh >/dev/null 2>&1 && grep -inE '^[[:space:]]*umask[[:space:]]+[0-9]+' /etc/profile.d/*.sh | tail -n 5 || echo 'profile_d_not_found_or_no_umask' ) ; \
 ( [ -f /etc/bashrc ] && grep -inE '^[[:space:]]*umask[[:space:]]+[0-9]+' /etc/bashrc | tail -n 3 || echo 'bashrc_not_found_or_no_umask' ) ; \
 ( [ -f /etc/login.defs ] && grep -inE '^[[:space:]]*UMASK[[:space:]]+[0-9]+' /etc/login.defs | tail -n 3 || echo 'login_defs_not_found' )"
 
-# UMASK 값 유효성 판정 함수 분기점
+# UMASK 값 유효성 판정 함수
 is_umask_ok() {
   local raw="$1"
   local v dec required
@@ -64,7 +65,7 @@ is_umask_ok() {
   return 1
 }
 
-# /etc/profile 조치 분기점
+# /etc/profile 조치
 if [ -f "$PROFILE_FILE" ]; then
   CUR_PROFILE=$(grep -iE '^[[:space:]]*umask[[:space:]]+[0-9]+' "$PROFILE_FILE" 2>/dev/null | tail -n 1 | awk '{print $2}')
   if [ -n "$CUR_PROFILE" ] && is_umask_ok "$CUR_PROFILE"; then
@@ -80,7 +81,7 @@ if [ -f "$PROFILE_FILE" ]; then
   fi
 fi
 
-# /etc/profile.d/*.sh 조치 분기점
+# /etc/profile.d/*.sh 조치
 PROFILED_OK=1
 if ls -1 $PROFILED_GLOB >/dev/null 2>&1; then
   for f in $PROFILED_GLOB; do
@@ -101,7 +102,7 @@ if ls -1 $PROFILED_GLOB >/dev/null 2>&1; then
   done
 fi
 
-# /etc/bashrc 조치 분기점
+# /etc/bashrc 조치
 BASHRC_OK=1
 if [ -f "$BASHRC_FILE" ]; then
   CUR_BASHRC=$(grep -iE '^[[:space:]]*umask[[:space:]]+[0-9]+' "$BASHRC_FILE" 2>/dev/null | tail -n 1 | awk '{print $2}')
@@ -120,7 +121,7 @@ if [ -f "$BASHRC_FILE" ]; then
   fi
 fi
 
-# /etc/login.defs 조치 분기점
+# /etc/login.defs 조치
 if [ -f "$LOGIN_DEFS_FILE" ]; then
   CUR_LOGIN=$(grep -iE '^[[:space:]]*UMASK[[:space:]]+[0-9]+' "$LOGIN_DEFS_FILE" 2>/dev/null | tail -n 1 | awk '{print $2}')
   if [ -n "$CUR_LOGIN" ] && is_umask_ok "$CUR_LOGIN"; then
@@ -136,7 +137,7 @@ if [ -f "$LOGIN_DEFS_FILE" ]; then
   fi
 fi
 
-# 현재 설정 값 정보 수집 분기점
+# 현재 설정 값 정보 수집
 DETAIL_CONTENT=""
 
 if [ -f "$PROFILE_FILE" ]; then
@@ -159,7 +160,7 @@ if [ -f "$LOGIN_DEFS_FILE" ]; then
   [ -n "$LOGIN_LINE" ] && DETAIL_CONTENT="${DETAIL_CONTENT}${LOGIN_LINE}\n"
 fi
 
-# 최종 결과 판정 및 REASON_LINE 확정 분기점
+# 최종 결과 판정
 if [ "$PROFILE_OK" -eq 1 ] && [ "$LOGIN_DEFS_OK" -eq 1 ] && [ "$PROFILED_OK" -eq 1 ] && [ "$BASHRC_OK" -eq 1 ]; then
   IS_SUCCESS=1
   REASON_LINE="주요 설정 파일의 UMASK 값을 022 이상으로 설정하여 조치를 완료하여 이 항목에 대해 양호합니다."
@@ -172,7 +173,7 @@ else
   fi
 fi
 
-# RAW_EVIDENCE 작성을 위한 JSON 구조 생성 분기점
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -182,12 +183,13 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# JSON 데이터 이스케이프 처리 분기점
+
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 JSON 결과 출력 분기점
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

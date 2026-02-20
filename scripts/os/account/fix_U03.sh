@@ -31,9 +31,10 @@ PAM_PASSWORD_AUTH="/etc/pam.d/password-auth"
 
 TARGET_FILE="$CONF_FILE, $PAM_SYSTEM_AUTH, $PAM_PASSWORD_AUTH"
 
+# 점검 명령
 CHECK_COMMAND="( command -v authselect >/dev/null 2>&1 && authselect current 2>/dev/null ); ( command -v authselect >/dev/null 2>&1 && authselect check 2>/dev/null ); ( [ -f /etc/security/faillock.conf ] && grep -inEv '^[[:space:]]*#|^[[:space:]]*$' /etc/security/faillock.conf | grep -iE '^(deny|unlock_time)[[:space:]]*=' | tail -n 10 ); ( [ -f /etc/pam.d/system-auth ] && grep -inEv '^[[:space:]]*#|^[[:space:]]*$' /etc/pam.d/system-auth | grep -E 'pam_faillock\\.so|pam_tally2\\.so|pam_tally\\.so' | tail -n 10 ); ( [ -f /etc/pam.d/password-auth ] && grep -inEv '^[[:space:]]*#|^[[:space:]]*$' /etc/pam.d/password-auth | grep -E 'pam_faillock\\.so|pam_tally2\\.so|pam_tally\\.so' | tail -n 10 )"
 
-# 설정 파일 내 파라미터 업데이트 함수 (기존 로직 유지)
+# 설정 파일 내 파라미터 업데이트 함수
 set_param() {
   local file=$1
   local param=$2
@@ -51,7 +52,7 @@ set_param() {
   return 0
 }
 
-# PAM 파일 내 잠금 모듈 활성 여부 확인 함수 (기존 로직 유지)
+# PAM 파일 내 잠금 모듈 활성 여부 확인 함수
 pam_has_lock_module() {
   local file="$1"
   [ -f "$file" ] || return 1
@@ -59,7 +60,7 @@ pam_has_lock_module() {
     | grep -Eq 'pam_faillock\.so|pam_tally2\.so|pam_tally\.so'
 }
 
-# PAM 설정 파일에 pam_faillock 구문 강제 삽입 함수 (기존 로직 유지)
+# PAM 설정 파일에 pam_faillock 구문 강제 삽입 함수
 ensure_pam_faillock() {
   local file="$1"
   local stamp="$2"
@@ -174,7 +175,7 @@ if [ -f "$CONF_FILE" ]; then
   set_param "$CONF_FILE" "unlock_time" "120"
 fi
 
-# 조치 후 최종 상태 수집 분기점
+# 조치 후 최종 상태 수집
 DENY_VAL=""
 UNLOCK_VAL=""
 if [ -f "$CONF_FILE" ]; then
@@ -202,7 +203,7 @@ deny_before=$DENY_BEFORE
 unlock_time_before=$UNLOCK_BEFORE
 action_log=$ACTION_LOG"
 
-# 최종 판정 및 REASON_LINE 구성 분기점
+# 최종 판정 및 REASON_LINE 구성
 if [ -f "$CONF_FILE" ] && [ "$DENY_VAL" = "10" ] && [ "$UNLOCK_VAL" = "120" ] && [ "$PAM_MODULE_STATUS" = "applied" ]; then
   IS_SUCCESS=1
   REASON_LINE="계정 잠금 임계값을 10회로 제한하고 잠금 해제 시간을 120초로 설정한 뒤 PAM 모듈 설정을 완료하여 이 항목에 대해 양호합니다."
@@ -217,7 +218,7 @@ else
   fi
 fi
 
-# RAW_EVIDENCE 구성 및 JSON 이스케이프 (기존 방식 유지)
+# RAW_EVIDENCE 구성 및 JSON 이스케이프
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -227,6 +228,7 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')

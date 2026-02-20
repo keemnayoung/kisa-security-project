@@ -15,7 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 설정 분기점
+# 기본 변수
 ID="U-39"
 ACTION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 IS_SUCCESS=0
@@ -38,7 +38,7 @@ ACTION_ERR_LOG=""
 MODIFIED=0
 FAIL_FLAG=0
 
-# 유틸리티 함수 정의 분기점
+# 유틸리티 함수 정의
 append_err() {
   if [ -n "$ACTION_ERR_LOG" ]; then
     ACTION_ERR_LOG="${ACTION_ERR_LOG}\n$1"
@@ -87,12 +87,12 @@ disable_systemd_unit_if_exists() {
   MODIFIED=1
 }
 
-# 권한 체크 및 초기화 분기점
+# 권한 체크 및 초기화
 if [ "$(id -u)" -ne 0 ]; then
   append_err "(주의) root 권한이 아니면 조치가 실패할 수 있습니다."
 fi
 
-# NFS 서비스 및 공유 설정 조치 수행 분기점
+# NFS 서비스 및 공유 설정 조치 수행
 if ! command -v systemctl >/dev/null 2>&1; then
   IS_SUCCESS=0
   REASON_LINE="systemctl 명령을 사용할 수 없는 이유로 조치에 실패하여 여전히 이 항목에 대해 취약합니다."
@@ -124,7 +124,7 @@ else
     fi
   fi
 
-  # 조치 후 검증 및 상태 수집 분기점
+  # 조치 후 검증 및 상태 수집
   for u in "${UNITS[@]}"; do
     if unit_exists "$u"; then
       en="$(get_is_enabled "$u")"
@@ -148,7 +148,7 @@ else
     append_detail "/etc/exports: file_not_found"
   fi
 
-  # 최종 판정 및 REASON_LINE 확정 분기점
+  # 최종 판정
   if [ "$FAIL_FLAG" -eq 0 ]; then
     IS_SUCCESS=1
     REASON_LINE="NFS 관련 서비스를 모두 중지 및 비활성화하고 공유 설정 파일의 유효 라인을 주석 처리하여 조치를 완료하여 이 항목에 대해 양호합니다."
@@ -162,7 +162,7 @@ if [ -n "$ACTION_ERR_LOG" ]; then
   DETAIL_CONTENT="$DETAIL_CONTENT\n[Error_Log]\n$ACTION_ERR_LOG"
 fi
 
-# 결과 데이터 구성 및 출력 분기점
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

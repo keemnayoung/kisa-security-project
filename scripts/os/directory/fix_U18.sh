@@ -45,7 +45,7 @@ is_perm_ok() {
   return 1
 }
 
-# 조치 대상 파일 존재 여부 확인 분기점
+# 조치 대상 파일 존재 여부 확인
 if [ -f "$TARGET_FILE" ]; then
   MODIFIED=0
 
@@ -53,7 +53,7 @@ if [ -f "$TARGET_FILE" ]; then
   GROUP=$(stat -c "%G" "$TARGET_FILE" 2>/dev/null)
   PERM_RAW=$(stat -c "%a" "$TARGET_FILE" 2>/dev/null)
 
-  # 파일 정보 획득 성공 여부 확인 분기점
+  # 파일 정보 획득 성공 여부 확인
   if [ -z "$OWNER" ] || [ -z "$GROUP" ] || [ -z "$PERM_RAW" ]; then
     IS_SUCCESS=0
     REASON_LINE="파일 정보 확인 시 시스템 호출 오류가 발생한 이유로 조치에 실패하여 여전히 이 항목에 대해 취약합니다."
@@ -61,13 +61,13 @@ if [ -f "$TARGET_FILE" ]; then
   else
     PERM=$(printf "%03d" "$PERM_RAW" 2>/dev/null)
 
-    # 파일 소유자 root 변경 수행 분기점
+    # 파일 소유자 root 변경 수행
     if [ "$OWNER" != "root" ]; then
       chown root "$TARGET_FILE" 2>/dev/null
       MODIFIED=1
     fi
 
-    # 파일 권한 400 이하 변경 수행 분기점
+    # 파일 권한 400 이하 변경 수행
     if ! is_perm_ok "$PERM_RAW"; then
       chmod 400 "$TARGET_FILE" 2>/dev/null
       MODIFIED=1
@@ -81,7 +81,7 @@ if [ -f "$TARGET_FILE" ]; then
     # 현재 설정된 최종 상태 값 수집
     DETAIL_CONTENT="owner=$AFTER_OWNER, group=$AFTER_GROUP, perm=$AFTER_PERM"
 
-    # 최종 조치 결과 판정 및 메시지 구성 분기점
+    # 최종 조치 결과 판정 및 메시지 구성
     if [ "$AFTER_OWNER" = "root" ] && is_perm_ok "$AFTER_PERM_RAW"; then
       IS_SUCCESS=1
       REASON_LINE="파일 소유자를 root로 변경하고 권한을 400으로 수정 완료하여 이 항목에 대해 양호합니다."
@@ -96,7 +96,7 @@ else
   DETAIL_CONTENT="상태: 파일 미존재"
 fi
 
-# RAW_EVIDENCE 구성
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -106,12 +106,13 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# JSON 이스케이프 처리
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 JSON 출력
+
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

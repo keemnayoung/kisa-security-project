@@ -35,7 +35,7 @@ json_escape() {
     | sed ':a;N;$!ba;s/\n/\\n/g'
 }
 
-# guide(취약 시 자동 조치 가정)
+# 취약 가정 자동 조치
 GUIDE_LINE="자동 조치: 
 1) 파일 존재 여부 확인 후, 필요 시 백업을 생성합니다.
 2) 소유자가 root/bin/sys가 아니면 root로 변경합니다. (예: chown root /etc/services)
@@ -44,14 +44,12 @@ GUIDE_LINE="자동 조치:
 주의사항: 
 /etc/services는 포트 매핑 정보가 포함된 파일이므로, 운영 환경에서 파일이 비정상적으로 변경되었거나 서비스가 특정 커스텀 매핑에 의존하는 경우 예기치 않은 서비스 연동 문제가 발생할 수 있어 조치 전 백업 및 변경 이력 확인이 권장됩니다."
 
-# 분기 1) 파일 존재하지 않음
+# 파일 존재하지 않음
 if [ ! -f "$TARGET_FILE" ]; then
   STATUS="FAIL"
 
-  # FAIL 사유는 취약한 설정(상태)만 사용
   REASON_LINE="file_not_found로 확인되어 이 항목에 대해 취약합니다."
 
-  # 현재 설정값(현 상태)만 출력
   DETAIL_CONTENT="file_exists=no
 owner=N/A
 perm=N/A
@@ -61,7 +59,7 @@ else
   FILE_OWNER=$(stat -c %U "$TARGET_FILE" 2>/dev/null)
   FILE_PERM=$(stat -c %a "$TARGET_FILE" 2>/dev/null)
 
-  # 분기 2) stat 결과 확인 불가
+  # stat 결과 확인 불가
   if [ -z "$FILE_OWNER" ] || [ -z "$FILE_PERM" ]; then
     STATUS="FAIL"
 
@@ -73,13 +71,13 @@ perm=unknown
 target_file=$TARGET_FILE"
 
   else
-    # 현재 설정값(현 상태)만 출력 (양호/취약 무관)
+    # 현재 설정값 출력
     DETAIL_CONTENT="file_exists=yes
 owner=$FILE_OWNER
 perm=$FILE_PERM
 target_file=$TARGET_FILE"
 
-    # 분기 3) 기준 충족 여부 판단
+    # 기준 충족 여부 판단
     if [[ "$FILE_OWNER" =~ ^(root|bin|sys)$ ]] && [ "$FILE_PERM" -le 644 ]; then
       STATUS="PASS"
       REASON_LINE="owner=$FILE_OWNER perm=$FILE_PERM로 설정되어 이 항목에 대해 양호합니다."
@@ -102,7 +100,7 @@ target_file=$TARGET_FILE"
   fi
 fi
 
-# raw_evidence 구성: detail은 (한 문장 이유) + \n + (현재 설정값)
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

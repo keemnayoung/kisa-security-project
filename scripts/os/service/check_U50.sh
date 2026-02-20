@@ -15,6 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
+# 기본 변수
 ID="U-50"
 STATUS="PASS"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
@@ -23,6 +24,7 @@ REASON_LINE=""
 DETAIL_CONTENT=""
 TARGET_FILE=""
 
+# 점검 명령
 CHECK_COMMAND='
 systemctl is-active named named-chroot 2>/dev/null;
 pgrep -x named 2>/dev/null;
@@ -35,6 +37,7 @@ VULNERABLE=0
 DETAIL_LINES=""
 REASON_SETTING=""
 VULN_SNIPPET=""
+
 
 append_detail() {
   local line="$1"

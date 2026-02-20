@@ -15,7 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 설정 분기점
+# 기본 변수
 ID="U-38"
 ACTION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 IS_SUCCESS=0
@@ -40,7 +40,7 @@ ACTION_ERR_LOG=""
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 MODIFIED=0
 
-# 유틸리티 함수 정의 분기점
+# 유틸리티 함수 정의
 append_err() {
   if [ -n "$ACTION_ERR_LOG" ]; then
     ACTION_ERR_LOG="${ACTION_ERR_LOG}\n$1"
@@ -57,12 +57,12 @@ append_detail() {
   fi
 }
 
-# root 권한 안내 분기점
+# root 권한 안내
 if [ "$(id -u)" -ne 0 ]; then
   append_err "(주의) root 권한이 아니면 sed/systemctl 조치가 실패할 수 있습니다."
 fi
 
-# 서비스 재시작 함수 정의 분기점
+# 서비스 재시작 함수 정의
 restart_inetd_if_exists() {
   command -v systemctl >/dev/null 2>&1 || return 0
   systemctl list-unit-files 2>/dev/null | grep -qE "^inetd\.service" || return 0
@@ -75,7 +75,7 @@ restart_xinetd_if_exists() {
   systemctl restart xinetd 2>/dev/null || append_err "systemctl restart xinetd 실패"
 }
 
-# systemd 유닛 비활성화 처리 분기점
+# systemd 유닛 비활성화 처리
 disable_systemd_unit_if_exists() {
   local unit="$1"
   command -v systemctl >/dev/null 2>&1 || return 0
@@ -87,7 +87,7 @@ disable_systemd_unit_if_exists() {
   MODIFIED=1
 }
 
-# 서비스 존재 여부 확인 분기점
+# 서비스 존재 여부 확인
 unit_exists() {
   local unit="$1"
   command -v systemctl >/dev/null 2>&1 || return 1
@@ -110,7 +110,7 @@ any_service_present() {
   return 1
 }
 
-# 1) inetd 서비스 조치 분기점
+# 1) inetd 서비스 조치
 if [ -f "/etc/inetd.conf" ]; then
   if grep -nEv "^[[:space:]]*#" /etc/inetd.conf 2>/dev/null | grep -qE "^[[:space:]]*(echo|discard|daytime|chargen)([[:space:]]|$)" ; then
     cp -a /etc/inetd.conf "/etc/inetd.conf.bak_${TIMESTAMP}" 2>/dev/null || append_err "inetd.conf 백업 실패"
@@ -122,7 +122,7 @@ if [ -f "/etc/inetd.conf" ]; then
   fi
 fi
 
-# 2) xinetd 서비스 조치 분기점
+# 2) xinetd 서비스 조치
 XINETD_CHANGED=0
 for s in "${DOS_SERVICES[@]}"; do
   f="/etc/xinetd.d/$s"
@@ -140,7 +140,7 @@ if [ "$XINETD_CHANGED" -eq 1 ]; then
   restart_xinetd_if_exists
 fi
 
-# 3) systemd 유닛 조치 분기점
+# 3) systemd 유닛 조치
 for base in echo discard daytime chargen; do
   for suf in "" "-dgram" "-stream"; do
     disable_systemd_unit_if_exists "${base}${suf}.service"
@@ -148,7 +148,7 @@ for base in echo discard daytime chargen; do
   done
 done
 
-# 4) 조치 결과 검증 및 상세 정보 수집 분기점
+# 4) 조치 결과 검증 및 상세 정보 수집
 FAIL_FLAG=0
 
 INETD_POST="inetd_conf_not_found(na)"
@@ -198,7 +198,7 @@ append_detail "inetd_status: $INETD_POST"
 append_detail "xinetd_status: $XINETD_POST_SUMMARY"
 append_detail "systemd_status: $SYSTEMD_UNITS_AFTER"
 
-# 추가 수동 조치 필요 서비스 확인 분기점
+# 추가 수동 조치 필요 서비스 확인
 if any_service_present chronyd.service ntpd.service systemd-timesyncd.service -- chronyd ntpd; then
   append_detail "manual_note: NTP 관련 서비스가 활성화되어 있습니다. 미사용 시 수동 조치가 필요합니다."
 fi
@@ -211,7 +211,7 @@ if any_service_present snmpd.service snmptrapd.service -- snmpd snmptrapd; then
   append_detail "manual_note: SNMP 서비스가 활성화되어 있습니다. 미사용 시 수동 조치가 필요합니다."
 fi
 
-# 최종 판정 및 REASON_LINE 구성 분기점
+# 최종 판정 및 REASON_LINE 구성
 if [ "$FAIL_FLAG" -eq 0 ]; then
   IS_SUCCESS=1
   REASON_LINE="DoS 공격에 취약한 서비스(echo, discard, daytime, chargen)를 중지하고 비활성화하여 조치를 완료하여 이 항목에 대해 양호합니다."
@@ -224,7 +224,7 @@ if [ -n "$ACTION_ERR_LOG" ]; then
   DETAIL_CONTENT="$DETAIL_CONTENT\n[Error_Log]\n$ACTION_ERR_LOG"
 fi
 
-# 결과 데이터 구성 및 출력 분기점
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

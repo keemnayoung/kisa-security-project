@@ -33,7 +33,7 @@
 # $PASSWD_FILE
 # $GSHADOW_FILE"
 
-# # (참고용) 조치 대상 식별 커맨드(기존 + gshadow 정합성/유령멤버는 detail로 기록)
+# # 조치 대상 식별 커맨드(기존 + gshadow 정합성/유령멤버는 detail로 기록)
 # CHECK_COMMAND="(awk -F: 'NR==FNR{g[\$3]=\$0;next}{u[\$4]=1} END{for(gid in g){split(g[gid],a,\":\"); if(gid>=1000){gm=a[4]; if(!u[gid] && gm==\"\"){print a[1]\":\"gid\":\"gm}}}}' /etc/group /etc/passwd 2>/dev/null)"
 
 # GID_MIN=1000
@@ -45,11 +45,11 @@
 # REMOVED_GSHADOW_ONLY=()
 # REMOVED_GHOST_MEMBERS=()
 
-# # 조치 수행(백업 없음)
+# # 조치 수행
 # if [ -f "$GROUP_FILE" ] && [ -f "$PASSWD_FILE" ] && [ -f "$GSHADOW_FILE" ]; then
 
 #   # ---------------------------
-#   # 1) /etc/group ↔ /etc/gshadow 정합성 불일치 조치 (필수)
+#   # 1) /etc/group ↔ /etc/gshadow 정합성 불일치 조치
 #   #    - group에만 있는 그룹: gshadow에 기본 엔트리 추가
 #   #    - gshadow에만 있는 엔트리: gshadow에서 라인 삭제
 #   # ---------------------------
@@ -85,7 +85,7 @@
 #   done < "$GSHADOW_FILE"
 
 #   # ---------------------------
-#   # 2) /etc/group GMEM에 존재하지 않는 계정(유령 멤버) 제거 (필수)
+#   # 2) /etc/group GMEM에 존재하지 않는 계정(유령 멤버) 제거
 #   #    - gpasswd -d <user> <group> 로 멤버십 제거
 #   # ---------------------------
 #   while IFS=: read -r GNAME GPASS GID GMEM; do
@@ -111,7 +111,7 @@
 #   done < "$GROUP_FILE"
 
 #   # ---------------------------
-#   # 3) 기존 조치: 유휴 그룹(GID 1000+ & primary 사용자 없음 & GMEM 비어있음) 삭제
+#   # 3) 유휴 그룹(GID 1000+ & primary 사용자 없음 & GMEM 비어있음) 삭제
 #   #    - 읽는 중 삭제로 인한 이슈 방지 위해 삭제 후보를 먼저 수집 후 처리
 #   # ---------------------------
 #   DELETE_CANDIDATES=()
@@ -202,7 +202,7 @@
 #     DETAIL_CONTENT="${DETAIL_CONTENT}still_unused_groups_gid_1000_plus:\nnone\n"
 #   fi
 
-#   # 조치 내역(요약)
+#   # 조치 내역
 #   DETAIL_CONTENT="${DETAIL_CONTENT}removed_groups=$(printf "%s" "${#REMOVED_GROUPS[@]}")\n"
 #   DETAIL_CONTENT="${DETAIL_CONTENT}fixed_mismatch_added=$(printf "%s" "${#FIXED_MISMATCH[@]}")\n"
 #   DETAIL_CONTENT="${DETAIL_CONTENT}removed_orphan_gshadow=$(printf "%s" "${#REMOVED_GSHADOW_ONLY[@]}")\n"

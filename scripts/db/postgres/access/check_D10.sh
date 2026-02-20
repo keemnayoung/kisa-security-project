@@ -134,7 +134,7 @@ if [ -z "${LISTEN_ADDR:-}" ]; then
   [ -z "${LISTEN_ADDR:-}" ] && LISTEN_ADDR="$(extract_listen_addresses_from_file "$CONF_FILE_RESOLVED" 2>/dev/null || true)"
 fi
 
-# pg_hba.conf 파일 존재 여부에 따른 분석 수행
+# pg_hba.conf 파일 존재 여부에 따른 분석
 if [ -z "$HBA_FILE" ] || [ ! -f "$HBA_FILE" ]; then
   STATUS="FAIL"
   REASON_LINE="pg_hba.conf 경로를 확인할 수 없어 원격 접속 허용 범위를 점검하지 못했습니다."
@@ -186,7 +186,7 @@ else
     LISTEN_STATUS="허용"
   fi
 
-  # 점검 결과 판정 분기점
+  # 점검 결과 판정
   if [ "$LISTEN_STATUS" != "허용" ] || [ -n "$OPEN_ADDR" ] || [ -n "$OTHER_ADDR" ]; then
     STATUS="FAIL"
     # 취약한 설정 부분만 기술하여 사유 작성
@@ -210,12 +210,12 @@ GUIDE_LINE="이 항목에 대해서 listen_addresses를 루프백으로 강제 �
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 CHECK_COMMAND="SHOW config_file; SHOW hba_file; SHOW listen_addresses; parse pg_hba.conf(listen_addresses/CIDR-ADDRESS)"
 
-# JSON 및 파이썬 대시보드 호환을 위한 이스케이프 함수
+
 escape_json_str() {
   echo "$1" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
-# RAW_EVIDENCE JSON 데이터 구성
+# raw_evidence 구성
 RAW_EVIDENCE_JSON=$(cat <<EOF
 {
   "command":"$(escape_json_str "$CHECK_COMMAND")",
@@ -226,9 +226,10 @@ RAW_EVIDENCE_JSON=$(cat <<EOF
 EOF
 )
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE_JSON")"
 
-# 최종 결과 JSON 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

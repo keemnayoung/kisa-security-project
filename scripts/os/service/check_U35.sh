@@ -166,10 +166,10 @@ else
   append_line DETAIL_LINES "Samba: /etc/samba/smb.conf 파일 미존재"
 fi
 
-# DETAIL_CONTENT: 양호/취약과 관계 없이 현재 설정 값만 출력
+# DETAIL_CONTENT 구성
 DETAIL_CONTENT="$(printf "%b" "$DETAIL_LINES" | sed 's/[[:space:]]*$//')"
 
-# PASS/FAIL 판정에 따라 detail 첫 문장(이유)을 구성
+# REASON_LINE 구성
 if [ "$SERVICE_EXISTS" -eq 0 ]; then
   STATUS="PASS"
   REASON_LINE="익명 접근 허용 설정이 확인되지 않아 이 항목에 대해 양호합니다."
@@ -181,7 +181,7 @@ else
   REASON_LINE="익명 접근 허용 설정이 확인되지 않아 이 항목에 대해 양호합니다."
 fi
 
-# guide: 자동 조치 시 운영 영향 가능성 + 관리자가 수행할 조치 방법 안내
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE=$(cat <<'EOF'
 이 항목에 대해서 공유 서비스 설정을 자동으로 변경하면 정상 업무용 공유/접속이 중단되거나 서비스 연동(클라이언트, 배치, 마운트, 접근 권한 정책)에 장애가 발생할 위험이 존재하여 수동 조치가 필요합니다.
 관리자가 직접 확인 후 FTP는 익명 접속을 비활성화(ftp/anonymous 계정 사용 여부 확인 및 필요 시 제거, vsftpd는 anonymous_enable=NO로 설정), ProFTPd는 <Anonymous> 블록 및 User/UserAlias 기반 익명 설정을 비활성화, NFS는 /etc/exports에서 anonuid/anongid를 제거, Samba는 smb.conf에서 guest ok = no로 변경하고 설정 반영/재기동해 주시기 바랍니다.

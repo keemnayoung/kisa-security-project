@@ -75,7 +75,7 @@ if [ "$STATUS" = "PASS" ]; then
     REASON_LINE="/etc/sudoers 파일이 owner=root이고 perm=${PERM_STR}로 설정되어 있어 이 항목에 대해 양호합니다."
   fi
 else
-  # 취약 사유(취약한 설정만 노출)
+  # 취약 사유
   if [ "$OWNER" != "root" ] && echo "$PERM_STR" | grep -Eq '^[0-7]{3,4}$' && [ "$PERM_STR" -gt 640 ]; then
     REASON_LINE="/etc/sudoers 파일이 owner=${OWNER}이고 perm=${PERM_STR}로 설정되어 있어 이 항목에 대해 취약합니다."
   elif [ "$OWNER" != "root" ]; then
@@ -84,14 +84,14 @@ else
     REASON_LINE="/etc/sudoers 파일이 perm=${PERM_STR}로 설정되어 있어 이 항목에 대해 취약합니다."
   fi
 
-  # 취약 시 가이드(자동 조치 가정)
+  # 취약 가정 자동 조치
   GUIDE_LINE="자동 조치:
   /etc/sudoers 파일 소유자를 root로 변경하고 권한을 640으로 조정합니다.
   주의사항: 
   sudoers 권한/소유자 변경 중 설정 오류나 파일 손상 시 sudo 사용이 제한될 수 있으므로 콘솔 접속/복구 경로를 확보한 뒤 적용하는 것이 안전합니다."
 fi
 
-# raw_evidence 구성 (줄바꿈이 DB 저장/재조회 시 유지되도록 \\n로 escape)
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

@@ -26,7 +26,6 @@ DETAIL_CONTENT=""
 REASON_LINE=""
 
 json_escape() {
-  # 역슬래시 → 따옴표 → 개행 순으로 escape (DB 저장/재로딩 시 개행 복원 용이)
   echo "$1" \
     | sed 's/\\/\\\\/g' \
     | sed 's/"/\\"/g' \
@@ -34,7 +33,7 @@ json_escape() {
 }
 
 first_n_paths_csv() {
-  # 여러 줄 경로를 "a, b, c" 형태로 (최대 N개)
+  # 여러 줄 경로를 "a, b, c" 형태로
   local n="$1"
   head -n "$n" | paste -sd ', ' -
 }
@@ -55,7 +54,6 @@ EOF
 if [ -n "$RESULT_SUID_SGID" ] || [ -n "$RESULT_STICKY" ]; then
   STATUS="FAIL"
 
-  # 취약 시 "어떠한 이유"에는 취약한 설정(발견된 항목)만 포함
   REASON_PARTS=()
   if [ -n "$RESULT_SUID_SGID" ]; then
     EX_SUID_SGID="$(echo "$RESULT_SUID_SGID" | first_n_paths_csv 3)"
@@ -66,7 +64,6 @@ if [ -n "$RESULT_SUID_SGID" ] || [ -n "$RESULT_STICKY" ]; then
     REASON_PARTS+=("root 소유 파일에 Sticky bit(1000) 설정이 존재하며 예시는 ${EX_STICKY}")
   fi
 
-  # 한 문장으로만 구성
   if [ "${#REASON_PARTS[@]}" -eq 2 ]; then
     REASON_LINE="${REASON_PARTS[0]}, ${REASON_PARTS[1]}로 이 항목에 대해 취약합니다."
   else
@@ -74,17 +71,17 @@ if [ -n "$RESULT_SUID_SGID" ] || [ -n "$RESULT_STICKY" ]; then
   fi
 else
   STATUS="PASS"
-  # 양호 시 "어떠한 이유"에는 기준에 해당하는 설정값(없음)을 포함
   REASON_LINE="root 소유 파일에 SUID/SGID(4000/2000) 및 Sticky bit(1000) 설정이 존재하지 않아 이 항목에 대해 양호합니다."
 fi
 
-# 수동 조치 안내(자동 조치 위험 + 조치 방법) 문장 단위 줄바꿈
+# 자동 조치 위험 + 조치 방법
 GUIDE_LINE=$(cat <<EOF
 SUID/SGID/Sticky bit 권한을 일괄 제거하면 OS 및 응용프로그램 기능 장애가 발생할 수 있어 수동 조치가 필요합니다.
 관리자가 직접 확인 후 불필요한 파일은 chmod -s 또는 chmod -t로 특수 권한을 제거하고 반드시 필요한 경우 chgrp <그룹> 후 chmod 4750 등으로 특정 그룹만 사용하도록 제한해 주시기 바랍니다.
 EOF
 )
 
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -98,6 +95,7 @@ EOF
 
 RAW_EVIDENCE_ESCAPED="$(json_escape "$RAW_EVIDENCE")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

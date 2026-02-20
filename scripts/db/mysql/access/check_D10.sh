@@ -31,7 +31,7 @@ TIMEOUT_BIN="$(command -v timeout 2>/dev/null || true)"
 # 점검 시 제외할 내부망 및 로컬 주소 정의
 ALLOWED_HOSTS_CSV="${ALLOWED_HOSTS_CSV:-localhost,127.0.0.1,::1}"
 
-# MySQL 쿼리 실행 함수 (타임아웃 및 에러 처리 포함)
+# MySQL 쿼리 실행 함수
 run_mysql() {
     local sql="$1"
     if [[ -n "$TIMEOUT_BIN" ]]; then
@@ -71,7 +71,7 @@ fi
 
 REASON_LINE=""
 DETAIL_CONTENT=""
-# 자동 조치(계정 삭제/수정) 시 발생할 수 있는 운영 환경 접속 차단 위험 정의
+# 자동 조치 시 발생할 수 있는 운영 환경 접속 차단 위험 정의
 GUIDE_LINE="이 항목에 대해서 모든 클라이언트('%') 접속 계정을 자동으로 변경하거나 삭제할 경우, 실제 운영 중인 애플리케이션의 DB 접속이 즉시 차단되어 서비스 장애가 발생할 수 있는 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 확인 후 사용되지 않는 원격 접속 계정은 DROP USER 명령으로 삭제하고, 필요한 계정은 UPDATE user SET host='<특정IP>' WHERE... 명령을 통해 접속 범위를 특정 IP로 제한하여 조치해 주시기 바랍니다."
 
 # 점검 수행 가능 여부 판정 분기점
@@ -118,7 +118,7 @@ else
     DETAIL_CONTENT="[전체 계정 접속 허용 범위 설정 값]\n${TOTAL_LIST}"
 fi
 
-# 증적 데이터 JSON 구조화
+# raw_evidence 구성
 CHECK_COMMAND="mysql -e \"SELECT user,host,account_locked FROM mysql.user;\""
 RAW_EVIDENCE=$(cat <<EOF
 {
@@ -130,12 +130,12 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# 파이썬/DB 환경에서 개행 및 특수문자 처리를 위한 이스케이프
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 결과 JSON 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF_JSON
 {

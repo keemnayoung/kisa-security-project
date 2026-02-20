@@ -30,6 +30,8 @@ TARGET_FILES=(
 )
 
 TARGET_FILE="/etc/profile"
+
+# 점검 명령
 CHECK_COMMAND='grep -nEi "^[[:space:]]*TMOUT[[:space:]]*=" /etc/profile /etc/profile.d/*.sh /etc/bashrc 2>/dev/null | grep -nEv "^[[:space:]]*#" | head -n 5 || echo "tmout_not_found"'
 
 DETAIL_CONTENT=""
@@ -65,7 +67,7 @@ if [ "${#CANDIDATE_LINES[@]}" -gt 0 ]; then
   [ -z "$TMOUT_VAL" ] && TMOUT_VAL="not_set"
 fi
 
-# 분기: TMOUT/EXPORT 설정 상태에 따라 상태 판정
+# TMOUT/EXPORT 설정 상태에 따라 상태 판정
 if [ "$TMOUT_VAL" != "not_set" ] && echo "$TMOUT_VAL" | grep -qE '^[0-9]+$' && [ "$TMOUT_VAL" -gt 0 ] && [ "$TMOUT_VAL" -le 600 ] && [ "$EXPORT_FOUND" = "yes" ]; then
   STATUS="PASS"
 else
@@ -79,9 +81,8 @@ else
   DETAIL_CONTENT="tmout_last_line=not_found"$'\n'"tmout_value=$TMOUT_VAL"$'\n'"export_tmout=$EXPORT_FOUND"
 fi
 
-# 분기: detail의 첫 문장(이유+양호/취약) 구성
-# - 양호: 만족하는 설정값(T MOUT 값 + export 적용)을 이유로 사용
-# - 취약: 취약한 부분의 설정만 이유로 사용(미설정/범위초과/미export/점검불가)
+# 양호: 만족하는 설정값(T MOUT 값 + export 적용)을 이유로 사용
+# 취약: 취약한 부분의 설정만 이유로 사용(미설정/범위초과/미export/점검불가)
 if [ "$STATUS" = "PASS" ]; then
   DETAIL_HEAD="TMOUT=$TMOUT_VAL 및 export TMOUT가 적용되어 이 항목에 대해 양호합니다."
 else
@@ -100,6 +101,7 @@ else
   fi
 fi
 
+# 취약 가정 자동 조치
 GUIDE_LINE="자동 조치:
 /etc/profile에서 TMOUT 관련 설정을 정리한 뒤 TMOUT=600과 export TMOUT를 추가하여 일괄 적용합니다.
 주의사항: 

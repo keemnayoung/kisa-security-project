@@ -27,6 +27,8 @@ CHECK_COMMAND='for d in /root /home /etc /tmp /var/tmp; do [ -d "$d" ] && ls -al
 
 DETAIL_CONTENT=""
 REASON_LINE=""
+
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="정상 동작에 필요한 숨김 설정 파일까지 삭제되어 서비스 또는 사용자 환경에 장애가 발생할 위험이 존재하여 수동 조치가 필요합니다.
 관리자가 직접 확인 후 불필요하거나 의심스러운 숨김 파일/디렉터리를 rm 또는 rm -r로 제거해 주시기 바랍니다."
 
@@ -60,7 +62,7 @@ for d in "${TARGET_DIRS[@]}"; do
   fi
 done
 
-# Step1: 특정 디렉토리 ls -al 결과 수집
+# 특정 디렉토리 ls -al 결과 수집
 LS_AL_RAW=""
 for d in "${TARGET_DIRS[@]}"; do
   [ -d "$d" ] || continue
@@ -69,7 +71,7 @@ for d in "${TARGET_DIRS[@]}"; do
   LS_AL_RAW+=$'\n\n'
 done
 
-# DETAIL_CONTENT는 양호/취약과 관계 없이 "현재 설정값"만 표기
+# 현재 설정값
 DETAIL_CONTENT="Target_dirs: $TARGET_FILE"$'\n\n'
 DETAIL_CONTENT+="[Step1: ls -al 결과(일부)]"$'\n'
 DETAIL_CONTENT+="$LS_AL_RAW"$'\n'
@@ -89,7 +91,6 @@ else
   DETAIL_CONTENT+="none"
 fi
 
-# PASS/FAIL 분기: reason 문장은 1문장, "어떠한 이유(설정 값)"만 포함
 if [[ -n "$HIDDEN_FILES_RAW" || -n "$HIDDEN_DIRS_RAW" ]]; then
   STATUS="FAIL"
 
@@ -109,7 +110,7 @@ else
   REASON_LINE="Hidden_files: none, Hidden_directories: none 로 확인되어 이 항목에 대해 양호합니다."
 fi
 
-# RAW_EVIDENCE 구성: 각 값은 문장/블록을 줄바꿈으로 구분 (파이썬/DB 복원용 \n 이스케이프)
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -123,6 +124,7 @@ EOF
 
 RAW_EVIDENCE_ESCAPED="$(json_escape "$RAW_EVIDENCE")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

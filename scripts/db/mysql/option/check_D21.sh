@@ -86,7 +86,7 @@ DETAIL_CONTENT=""
 # 자동 조치 시 권한 체계 붕괴 및 관리 스크립트 장애 위험성 정의
 GUIDE_LINE="이 항목에 대해서 GRANT OPTION 권한을 자동으로 회수할 경우, 해당 계정을 통해 하위 계정을 관리하거나 권한을 배분하는 자동화 스크립트 및 관리 도구가 즉시 차단되어 운영상 장애가 발생할 수 있는 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 확인 후 권한 위임이 불필요한 일반 계정에 대해 REVOKE GRANT OPTION ON *.* FROM '<계정명>'@'<호스트>' 명령을 수행하여 조치해 주시기 바랍니다."
 
-# 점검 수행 가능 여부 및 예외 상황 분기 처리
+# 점검 수행 가능 여부 및 예외 상황
 if [[ "$R_TABLE" == "ERROR_TIMEOUT" || "$R_SCHEMA" == "ERROR_TIMEOUT" || "$R_GLOBAL" == "ERROR_TIMEOUT" ]]; then
     STATUS="FAIL"
     REASON_LINE="데이터베이스 응답 지연으로 인해 권한 정보를 조회할 수 없어 점검을 완료하지 못했습니다."
@@ -129,7 +129,7 @@ else
     DETAIL_CONTENT="[현재 시스템 전체 GRANT OPTION 설정 현황]\n${ALL_SETTINGS}"
 fi
 
-# 증적용 JSON 구조화 및 개행 처리
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -140,12 +140,12 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# 파이썬/DB에서 줄바꿈이 유지되도록 JSON 이스케이프 처리
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 결과 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

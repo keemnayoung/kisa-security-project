@@ -151,10 +151,10 @@ else
 fi
 append_detail_line "rhosts_effective_lines=$RHOSTS_AFTER_SUMMARY"
 
-# DETAIL_CONTENT: 양호/취약과 무관하게 현재 설정 값만 출력
+# DETAIL_CONTENT 구성
 DETAIL_CONTENT="$(printf "%s" "$DETAIL_LINES" | sed 's/[[:space:]]*$//')"
 
-# PASS/FAIL 문장(한 문장) + detail 구성
+# REASON_LINE 구성
 if [ "$VULNERABLE" -eq 1 ]; then
   STATUS="FAIL"
   if [ -z "$REASONS" ]; then
@@ -167,7 +167,7 @@ else
   REASON_LINE="inetd에서 r 계열 활성 라인이 없고 xinetd에 disable=no 설정이 없으며 systemd에서 enabled/active 상태가 없고 /etc/hosts.equiv 및 /home/*/.rhosts에 유효 설정이 없어 이 항목에 대해 양호합니다."
 fi
 
-# guide: 취약 시 자동 조치 가정(조치 방법 + 주의사항)
+# 취약 가정 자동 조치
 GUIDE_LINE="자동 조치:
 /etc/inetd.conf에서 rsh,rlogin,rexec,shell,login,exec 활성 라인을 주석 처리하고 inetd가 존재하면 재시작합니다.
 /etc/xinetd.d/*에서 disable=no를 disable=yes로 변경하고 xinetd가 존재하면 재시작합니다.
@@ -177,7 +177,7 @@ systemd에서 rsh/rlogin/rexec/shell/login/exec의 service 및 socket을 stop �
 r 계열 서비스가 백업/클러스터링/레거시 운영에 사용 중인 환경에서는 접속/연동이 중단될 수 있으므로 사전 사용 여부 확인과 설정 백업이 필요합니다.
 inetd/xinetd/systemd 재시작 또는 유닛 비활성화는 운영 중인 서비스에 일시적인 영향이 있을 수 있으므로 점검 창구/점검 시간에 수행하는 것이 안전합니다."
 
-# raw_evidence 구성 (모든 값은 \n 기준으로 문장 구분 가능)
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -193,6 +193,7 @@ RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

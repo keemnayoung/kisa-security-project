@@ -101,7 +101,7 @@ else
   done
 fi
 
-# /etc/exports는 주석/공백 제외 라인이 있으면 구성 흔적으로 판단(현재값은 항상 출력)
+# /etc/exports는 주석/공백 제외 라인이 있으면 구성 흔적으로 판단
 if [ -f /etc/exports ]; then
   EXPORTS_ACTIVE="$(grep -nEv "^[[:space:]]*#|^[[:space:]]*$" /etc/exports 2>/dev/null || true)"
   if [ -n "$EXPORTS_ACTIVE" ]; then
@@ -117,11 +117,11 @@ else
   add_good "/etc/exports=exports_not_found"
 fi
 
-# DETAIL_CONTENT는 양호/취약과 무관하게 "현재 설정값"만 출력
+# DETAIL_CONTENT 구성
 DETAIL_CONTENT="$(printf "%s\n" "${CURRENT_LINES[@]}")"
 [ -z "$DETAIL_CONTENT" ] && DETAIL_CONTENT="none"
 
-# detail의 첫 문장(양호/취약)은 건수 기반 요약문으로 작성
+# REASON_LINE 구성
 if [ "$STATUS" = "FAIL" ]; then
   VULN_COUNT="${#VULN_LINES[@]}"
   REASON_LINE="NFS 관련 서비스/소켓 ${VULN_COUNT}건이 활성 또는 자동 시작 상태로 이 항목에 대해 취약합니다."
@@ -129,6 +129,7 @@ else
   REASON_LINE="모든 NFS 관련 서비스 및 /etc/exports가 비활성화 상태로 이 항목에 대해 양호합니다."
 fi
 
+# 취약 가정 자동 조치
 GUIDE_LINE=$(cat <<'EOF'
 자동 조치:
 NFS 관련 유닛이 존재하면 systemctl stop <unit> 후 systemctl disable <unit> 및 systemctl mask <unit>를 적용합니다.
@@ -141,7 +142,7 @@ mask 적용은 향후 정상 재가동을 막을 수 있으므로 운영 정책�
 EOF
 )
 
-# raw_evidence 구성 (첫 줄: 평가 문장 / 다음 줄부터: 현재 설정값)
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

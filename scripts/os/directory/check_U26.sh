@@ -30,7 +30,7 @@ INVALID_FILES=$(find /dev \
   \( -path /dev/mqueue -o -path /dev/mqueue/\* -o -path /dev/shm -o -path /dev/shm/\* \) -prune -o \
   -type f -print 2>/dev/null)
 
-# 현재 설정값(양호/취약 모두 동일 포맷으로 제공)
+# 현재 설정값
 if [ -n "$INVALID_FILES" ]; then
   INVALID_FILES_CSV=$(echo "$INVALID_FILES" | paste -sd ", " -)
   LS_INFO=$(echo "$INVALID_FILES" | xargs -r ls -l 2>/dev/null)
@@ -44,7 +44,7 @@ ls -l 결과:
 none"
 fi
 
-# 양호/취약 판단 및 detail 1문장(이유에는 가이드 문구 없이 '설정 값'만)
+# 양호/취약 판단 및 detail
 if [ -n "$INVALID_FILES" ]; then
   STATUS="FAIL"
   REASON_LINE="/dev에 일반 파일(-type f)이 존재(${INVALID_FILES_CSV})하여 이 항목에 대해 취약합니다."
@@ -53,11 +53,11 @@ else
   REASON_LINE="/dev에 일반 파일(-type f)이 존재하지 않아 이 항목에 대해 양호합니다."
 fi
 
-# 수동 조치 안내(자동 조치 시 위험 + 조치 방법)
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="이 항목에 대해서 /dev 경로에서 잘못된 파일을 자동으로 삭제할 경우 정상 동작 중인 구성요소에 영향을 줄 수 있는 위험이 존재하여 수동 조치가 필요합니다.
 관리자가 직접 확인 후 /dev에서 일반 파일을 점검하고 불필요하거나 존재하지 않는 파일을 rm로 삭제해 조치해 주시기 바랍니다."
 
-# raw_evidence 구성(각 값은 줄바꿈으로 문장 구분, detail은 1문장 + 줄바꿈 + 설정값)
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "${CHECK_COMMAND_MAIN}
@@ -71,11 +71,12 @@ ${DETAIL_CONTENT}",
 EOF
 )
 
-# JSON escape(따옴표/줄바꿈) - Python/DB 저장 후 재조회 시 줄바꿈 복원 용이
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

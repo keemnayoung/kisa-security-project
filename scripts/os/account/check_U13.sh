@@ -69,7 +69,7 @@ check_pam_file() {
   fi
 }
 
-# 필수 파일 누락 여부 확인(누락 시 즉시 FAIL)
+# 필수 파일 누락 여부 확인(누락 시 FAIL)
 MISSING_FILES=""
 [ -f "$DEFS_FILE" ] || MISSING_FILES="${MISSING_FILES}login.defs_not_found"$'\n'
 [ -f "$SHADOW_FILE" ] || MISSING_FILES="${MISSING_FILES}shadow_not_found"$'\n'
@@ -85,22 +85,19 @@ if [ -n "$MISSING_FILES" ]; then
   # 현재 설정값(확인 불가 상태 포함)
   DETAIL_CONTENT="$(printf "%s" "$MISSING_FILES" | sed '/^$/d')"
 
-  GUIDE_LINE="자동 조치:
-/etc/login.defs에 ENCRYPT_METHOD를 SHA512로 설정합니다.
-/etc/pam.d/system-auth(및 존재 시 password-auth)의 pam_unix.so password 라인에 sha512 옵션을 적용합니다.
-주의사항: 
-PAM 설정 오타나 비정상 편집은 인증 실패를 유발할 수 있어 적용 전 백업과 점검이 필요합니다.
-ENCRYPT_METHOD 변경은 신규 비밀번호부터 적용되며 기존 계정은 비밀번호 재설정이 없으면 해시가 유지될 수 있습니다."
+  # 취약 가정 자동 조치
+  GUIDE_LINE="/etc/login.defs에 ENCRYPT_METHOD를 SHA512로 설정합니다.
+/etc/pam.d/system-auth(및 존재 시 password-auth)의 pam_unix.so password 라인에 sha512 옵션을 적용합니다."
 else
-  # Step 1: /etc/login.defs에서 ENCRYPT_METHOD 값 수집
+  # /etc/login.defs에서 ENCRYPT_METHOD 값 수집
   ENCRYPT_METHOD=$(grep -Ei '^[[:space:]]*ENCRYPT_METHOD[[:space:]]+' "$DEFS_FILE" 2>/dev/null | awk '{print $2}' | tail -n 1)
 
-  # Step 2: /etc/shadow에서 안전 접두어($5$/$6$/$y$) 외 사용 계정 수집
+  # /etc/shadow에서 안전 접두어($5$/$6$/$y$) 외 사용 계정 수집
   INVALID_ALGO_ACCOUNTS=$(awk -F: '
     $2 ~ /^\$/ && $2 !~ /^\$5\$/ && $2 !~ /^\$6\$/ && $2 !~ /^\$y\$/ {print $1}
   ' "$SHADOW_FILE" 2>/dev/null)
 
-  # Step 3: PAM 설정 점검(system-auth 필수, password-auth는 존재 시 점검)
+  # PAM 설정 점검(system-auth 필수, password-auth는 존재 시 점검)
   SYS_PAM_RES=$(check_pam_file "$PAM_SYSTEM_AUTH")
   PASS_PAM_RES=$(check_pam_file "$PAM_PASSWORD_AUTH")
 
@@ -143,7 +140,7 @@ else
   else
     STATUS="FAIL"
 
-    # 취약 사유(취약한 설정값만, 한 문장으로)
+    # 취약 사유
     REASON_SETTINGS=""
     if [ "$DEFS_OK" != "Y" ]; then
       REASON_SETTINGS="ENCRYPT_METHOD=${ENCRYPT_METHOD:-not_set}"
@@ -163,10 +160,11 @@ else
 
     REASON_LINE="${REASON_SETTINGS}로 이 항목에 대해 취약합니다."
 
-    GUIDE_LINE="자동 조치 시 /etc/login.defs에 ENCRYPT_METHOD를 SHA512로 설정합니다.
-자동 조치:
+    # 취약 가정 자동 조치
+    GUIDE_LINE="자동 조치:
+/etc/login.defs에 ENCRYPT_METHOD를 SHA512로 설정합니다.
 /etc/pam.d/system-auth(및 존재 시 password-auth)의 pam_unix.so password 라인에 sha512 옵션을 적용합니다.
-주의사항:
+주의사항: 
 PAM 설정 오타나 비정상 편집은 인증 실패를 유발할 수 있어 적용 전 백업과 점검이 필요합니다.
 ENCRYPT_METHOD 변경은 신규 비밀번호부터 적용되며 기존 계정은 비밀번호 재설정이 없으면 해시가 유지될 수 있습니다."
   fi

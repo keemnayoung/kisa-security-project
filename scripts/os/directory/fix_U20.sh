@@ -50,7 +50,7 @@ FAIL_FLAG=0
 MODIFIED=0
 DETAIL_CONTENT=""
 
-# 주요 설정 파일들에 대한 소유자 및 권한 조치 분기점
+# 주요 설정 파일들에 대한 소유자 및 권한 조치
 for FILE in "${FILES[@]}"; do
   if [ ! -f "$FILE" ]; then
     continue
@@ -71,7 +71,7 @@ for FILE in "${FILES[@]}"; do
   fi
 done
 
-# systemd 디렉터리 내 하위 파일들에 대한 조치 분기점
+# systemd 디렉터리 내 하위 파일들 조치
 if [ -d "$DIR" ]; then
   while IFS= read -r FILE; do
     [ -f "$FILE" ] || continue
@@ -92,7 +92,7 @@ if [ -d "$DIR" ]; then
   done < <(find "$DIR" -type f 2>/dev/null)
 fi
 
-# xinetd.d 디렉터리 내 하위 파일들에 대한 조치 분기점
+# xinetd.d 디렉터리 내 하위 파일들 조치
 if [ -d "$XINETD_DIR" ]; then
   while IFS= read -r FILE; do
     [ -f "$FILE" ] || continue
@@ -113,7 +113,7 @@ if [ -d "$XINETD_DIR" ]; then
   done < <(find "$XINETD_DIR" -type f 2>/dev/null)
 fi
 
-# 조치 결과에 대한 최종 상태 값 수집 및 검증 분기점
+# 조치 결과에 대한 최종 상태 값 수집 및 검증
 for FILE in "${FILES[@]}"; do
   if [ -f "$FILE" ]; then
     AFTER_OWNER=$(stat -c "%U" "$FILE" 2>/dev/null)
@@ -161,7 +161,7 @@ if [ -d "$XINETD_DIR" ]; then
   done < <(find "$XINETD_DIR" -type f 2>/dev/null)
 fi
 
-# 수집된 데이터를 바탕으로 최종 성공 여부 판정 분기점
+# 수집된 데이터를 바탕으로 최종 성공 여부 판정
 if [ "$FAIL_FLAG" -eq 0 ]; then
   IS_SUCCESS=1
   REASON_LINE="파일들의 소유자와 그룹을 root로 변경하고 권한을 600 이하로 조치를 완료하여 이 항목에 대해 양호합니다."
@@ -180,12 +180,12 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# JSON 데이터 이스케이프 처리
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 결과물 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

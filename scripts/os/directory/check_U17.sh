@@ -32,7 +32,7 @@ json_escape() {
   echo "$1" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g'
 }
 
-# 점검 대상 파일 목록 수집 (init/systemd 경로에서 대상 후보를 수집)
+# 점검 대상 파일 목록
 INIT_FILES=""
 if [ -d /etc/rc.d ]; then
   INIT_FILES=$(readlink -f /etc/rc.d/*/* 2>/dev/null)
@@ -119,9 +119,12 @@ else
 
   TARGET_FILE=$(printf "%s " "${TARGET_FILES[@]}" | sed 's/[[:space:]]*$//')
   DETAIL_CONTENT="$DETAIL_LINES"
+
+  # 자동조치 위험 + 조치 방법
   GUIDE_LINE="이 항목에 대해서 시스템 시작 스크립트가 임의로 변경될 위험이 존재하여 수동 조치가 필요합니다.
   관리자가 직접 대상 파일을 확인한 후 소유자를 root로 변경하고(chown root 또는 chown root:root), others 쓰기 권한을 제거(chmod o-w)해 주시기 바랍니다. 
   자동 조치로 일괄 변경할 경우 일부 서비스/에이전트가 기대하는 소유자/권한과 충돌하여 서비스 기동 실패나 운영 작업 영향이 발생할 수 있으니, 변경 전 백업과 변경 후 재기동/동작 확인을 권장합니다."
+
   # 판단 결과에 따른 reason/guide 구성
   if [ "$FOUND_VULN" = "Y" ]; then
     REASON_LINE="$VULN_ONLY_FIRST 로 이 항목에 대해 취약합니다."
@@ -131,13 +134,13 @@ else
   fi
 fi
 
-# raw_evidence는 DB 저장/재조회 시 줄바꿈이 복원되도록 \\n 형태로 저장되게 이스케이프 처리
 CHECK_COMMAND_ESCAPED=$(json_escape "$CHECK_COMMAND")
 REASON_LINE_ESCAPED=$(json_escape "$REASON_LINE")
 DETAIL_CONTENT_ESCAPED=$(json_escape "$DETAIL_CONTENT")
 GUIDE_LINE_ESCAPED=$(json_escape "$GUIDE_LINE")
 TARGET_FILE_ESCAPED=$(json_escape "$TARGET_FILE")
 
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND_ESCAPED",
@@ -150,6 +153,7 @@ EOF
 
 RAW_EVIDENCE_ESCAPED=$(json_escape "$RAW_EVIDENCE")
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

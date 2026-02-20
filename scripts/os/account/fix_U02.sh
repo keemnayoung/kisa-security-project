@@ -63,7 +63,7 @@ set_param() {
   return 0
 }
 
-# token(단독 라인) 보장 함수 (enforce_for_root)
+# token 보장 함수
 ensure_token_line() {
   local file="$1"
   local token="$2"
@@ -147,11 +147,11 @@ if [ -f "$PW_CONF" ] && [ -f "$PWH_CONF" ] && [ -f "$LOGIN_DEFS" ] \
    && [ -n "$PASS_MAX_DAYS" ] && [ "$PASS_MAX_DAYS" -le 90 ] 2>/dev/null \
    && [ -n "$PASS_MIN_DAYS" ] && [ "$PASS_MIN_DAYS" -ge 1 ] 2>/dev/null; then
   IS_SUCCESS=1
-  # 양호 시: 어떻게 바꿨는지 자연스럽게 연결
+  # 양호
   REASON_LINE="패스워드 최소 길이 8자 이상, 4종류 문자 조합 사용, 루트 계정 강제 적용, 이전 패스워드 4개 기억 및 유효기간 90일 이하로 설정을 완료하여 이 항목에 대해 양호합니다."
 else
   IS_SUCCESS=0
-  # 취약 시: 실패 원인 명시
+  # 취약
   if [ ! -f "$PW_CONF" ] || [ ! -f "$PWH_CONF" ] || [ ! -f "$LOGIN_DEFS" ]; then
     REASON_LINE="패스워드 정책 관련 설정 파일이 시스템에 존재하지 않는 이유로 조치에 실패하여 여전히 이 항목에 대해 취약합니다."
   else
@@ -174,7 +174,7 @@ RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

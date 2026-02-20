@@ -15,7 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 설정 분기점
+# 기본 변수 설정
 ID="U-36"
 ACTION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 IS_SUCCESS=0
@@ -42,7 +42,7 @@ systemd(rsh/rlogin/rexec/shell/login/exec)
 
 ACTION_ERR_LOG=""
 
-# 실행 권한 체크 분기점
+# 실행 권한 체크
 if [ "$(id -u)" -ne 0 ]; then
   ACTION_ERR_LOG="(주의) root 권한이 아니면 sed/systemctl 조치가 실패할 수 있습니다."
 fi
@@ -50,7 +50,7 @@ fi
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 MODIFIED=0
 
-# 유틸리티 함수 정의 분기점
+# 유틸리티 함수 정의
 append_err() {
   if [ -n "$ACTION_ERR_LOG" ]; then
     ACTION_ERR_LOG="${ACTION_ERR_LOG}\n$1"
@@ -104,7 +104,7 @@ neutralize_trust_file() {
   MODIFIED=1
 }
 
-# 1) inetd 설정 조치 분기점
+# 1) inetd 설정 조치
 if [ -f "/etc/inetd.conf" ]; then
   INETD_ACTIVE=0
   if grep -nEv "^[[:space:]]*#" /etc/inetd.conf 2>/dev/null | grep -qE "^[[:space:]]*(rsh|rlogin|rexec|shell|login|exec)([[:space:]]|$)" ; then
@@ -121,7 +121,7 @@ if [ -f "/etc/inetd.conf" ]; then
   fi
 fi
 
-# 2) xinetd 설정 조치 분기점
+# 2) xinetd 설정 조치
 XINETD_CHANGED=0
 for s in "${R_SERVICES[@]}"; do
   if [ -f "/etc/xinetd.d/$s" ]; then
@@ -139,13 +139,13 @@ if [ "$XINETD_CHANGED" -eq 1 ]; then
   restart_xinetd_if_exists
 fi
 
-# 3) systemd 유닛 조치 분기점
+# 3) systemd 유닛 조치
 for base in rsh rlogin rexec shell login exec; do
   disable_systemd_unit_if_exists "${base}.service"
   disable_systemd_unit_if_exists "${base}.socket"
 done
 
-# 4) 신뢰 기반 파일 무력화 분기점
+# 4) 신뢰 기반 파일 무력화
 neutralize_trust_file "/etc/hosts.equiv"
 
 RHOSTS_FILES=$(find /home -maxdepth 3 -type f -name .rhosts 2>/dev/null | head -n 200)
@@ -155,7 +155,7 @@ if [ -n "$RHOSTS_FILES" ]; then
   done <<< "$RHOSTS_FILES"
 fi
 
-# 5) 조치 후 상태 검증 분기점
+# 5) 조치 후 상태 검증
 FAIL_FLAG=0
 
 INETD_POST="inetd_conf_not_found"
@@ -214,7 +214,7 @@ else
 fi
 [ "$TRUST_BAD" -eq 1 ] && FAIL_FLAG=1
 
-# 상세 근거 수집 분기점
+# 상세 근거 수집
 append_detail "inetd_status: $INETD_POST"
 XINETD_POST_SUMMARY=""
 for s in "${R_SERVICES[@]}"; do
@@ -242,7 +242,7 @@ fi
 append_detail "hosts_equiv_status: $HOSTS_EQ_AFTER"
 append_detail "rhosts_status: $RHOSTS_AFTER_SUMMARY"
 
-# 최종 판정 및 REASON_LINE 구성 분기점
+# 최종 판정 및 REASON_LINE 구성
 if [ "$FAIL_FLAG" -eq 0 ]; then
   IS_SUCCESS=1
   REASON_LINE="r 계열 서비스를 중지 및 비활성화하고 신뢰 기반 접속 설정 파일의 유효 라인을 모두 주석 처리하여 조치를 완료하여 이 항목에 대해 양호합니다."
@@ -255,7 +255,7 @@ if [ -n "$ACTION_ERR_LOG" ]; then
   DETAIL_CONTENT="${DETAIL_CONTENT}\n[Error Log]\n${ACTION_ERR_LOG}"
 fi
 
-# RAW_EVIDENCE 구성 분기점
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -265,12 +265,12 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# JSON 데이터 이스케이프 처리 분기점
+# JSON 데이터 이스케이프 처리
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 JSON 결과 출력 분기점
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

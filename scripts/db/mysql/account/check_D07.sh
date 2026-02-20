@@ -76,7 +76,7 @@ else
     fi
 fi
 
-# 점검 시 사용된 핵심 로직 설명
+# raw_evidence 구성
 CHECK_COMMAND="ps -eo pid=,user=,comm= | awk '\$3==\"mysqld\" || \$3==\"mariadbd\"{print \$1, \$2, \$3}' + readlink -f /proc/<pid>/exe"
 RAW_EVIDENCE=$(cat <<EOF
 {
@@ -88,12 +88,12 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# JSON 데이터의 개행 및 특수문자가 파이썬/DB에서 깨지지 않도록 이스케이프 처리
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 결과 JSON 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

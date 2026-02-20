@@ -23,6 +23,8 @@ STATUS="PASS"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 
 TARGET_FILE="/etc/passwd"
+
+# 점검 명령
 CHECK_COMMAND='[ -f /etc/passwd ] && egrep "^(daemon|bin|sys|adm|listen|nobody|nobody4|noaccess|diag|operator|games|gopher):" /etc/passwd || echo "passwd_not_found_or_no_targets"'
 
 REASON_LINE=""
@@ -45,7 +47,7 @@ is_allowed_shell() {
   return 1
 }
 
-# guide 값(취약 조치 상황 가정)
+# 취약 가정 자동 조치
 GUIDE_LINE=$(cat <<'EOF'
 자동 조치: 
 로그인이 불필요한 시스템 계정의 로그인 쉘을 시스템에 존재하는 nologin 경로(/sbin/nologin 또는 /usr/sbin/nologin, 미존재 시 /bin/false)로 변경합니다.

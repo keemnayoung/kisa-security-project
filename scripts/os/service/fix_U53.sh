@@ -15,7 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 설정 분기점
+# 기본 변수 설정
 ID="U-53"
 ACTION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 IS_SUCCESS=0
@@ -26,7 +26,7 @@ ACTION_ERR_LOG=""
 SAFE_BANNER="Welcome to FTP service"
 SAFE_BANNER_FILE="/etc/vsftpd/banner.txt"
 
-# 유틸리티 함수 정의 분기점
+# 유틸리티 함수 정의
 add_detail(){ [ -n "${1:-}" ] && DETAIL_CONTENT="${DETAIL_CONTENT}${DETAIL_CONTENT:+\n}$1"; }
 add_err(){ [ -n "${1:-}" ] && ACTION_ERR_LOG="${ACTION_ERR_LOG}${ACTION_ERR_LOG:+\n}$1"; }
 add_target(){ [ -n "${1:-}" ] && TARGET_FILE="${TARGET_FILE/N\/A/}${TARGET_FILE:+, }$1"; TARGET_FILE="${TARGET_FILE#, }"; }
@@ -66,7 +66,7 @@ set_serverident_off(){
   return 0
 }
 
-# 권한 확인 및 조치 수행 분기점
+# 권한 확인 및 조치 수행
 if [ "$(id -u)" -ne 0 ]; then
   REASON_LINE="root 권한이 아니어서 FTP 서비스 정보 노출 제한 설정을 적용할 수 없어 조치를 중단합니다."
   add_err "(주의) root 권한이 아니면 설정 파일 수정 및 서비스 재시작이 실패할 수 있습니다."
@@ -74,7 +74,7 @@ else
   FAIL=0
   MOD=0
 
-  # vsftpd 설정 조치 분기점
+  # vsftpd 설정 조치
   if command -v vsftpd >/dev/null 2>&1; then
     VS_CONF=""
     [ -f /etc/vsftpd.conf ] && VS_CONF="/etc/vsftpd.conf"
@@ -106,7 +106,7 @@ else
     add_detail "vsftpd: not_installed"
   fi
 
-  # proftpd 설정 조치 분기점
+  # proftpd 설정 조치
   if command -v proftpd >/dev/null 2>&1; then
     PF_CONF=""
     [ -f /etc/proftpd/proftpd.conf ] && PF_CONF="/etc/proftpd/proftpd.conf"
@@ -130,7 +130,7 @@ else
     add_detail "proftpd: not_installed"
   fi
 
-  # 조치 결과 최종 판정 분기점
+  # 최종 판정
   if ! command -v vsftpd >/dev/null 2>&1 && ! command -v proftpd >/dev/null 2>&1; then
     IS_SUCCESS=1
     REASON_LINE="FTP 서비스(vsftpd/proftpd)가 설치되어 있지 않아 변경 없이도 조치가 완료되어 이 항목에 대해 양호합니다."
@@ -143,7 +143,7 @@ else
   fi
 fi
 
-# 출력 데이터 구성 분기점
+# 출력 데이터 구성
 [ -n "$ACTION_ERR_LOG" ] && add_detail "[Error_Log]\n$ACTION_ERR_LOG"
 CHECK_COMMAND='(vsftpd -v); (proftpd -v); grep -E "banner_file|ftpd_banner|ServerIdent" /etc/vsftpd.conf /etc/proftpd.conf'
 

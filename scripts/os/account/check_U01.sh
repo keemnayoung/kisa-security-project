@@ -22,7 +22,7 @@ ID="U-01"
 STATUS="FAIL"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 
-# 점검 대상 파일(대시보드 표기 편의를 위해 줄바꿈으로 구성)
+# 점검 대상 파일
 TARGET_SSHD="/etc/ssh/sshd_config"
 TARGET_PAM_LOGIN="/etc/pam.d/login"
 TARGET_SECURETTY="/etc/securetty"
@@ -33,7 +33,7 @@ $TARGET_SECURETTY
 EOF
 )
 
-# 점검 명령(설명용) - 값 자체가 문장별 줄바꿈을 갖도록 구성
+# 점검 명령
 CHECK_COMMAND=$(cat <<'CMD'
 [SSH] /etc/ssh/sshd_config 존재 시: sshd -T | grep ^permitrootlogin
 [Telnet] 활성 탐지: ss/netstat 23포트 LISTEN 또는 systemctl telnet.* active 또는 xinetd telnet(disable=no) 또는 inetd.conf telnet 엔트리
@@ -173,7 +173,7 @@ else
   STATUS="FAIL"
 fi
 
-# DETAIL_CONTENT: 양호/취약과 관계없이 "현재 설정 값들만" (줄바꿈으로 구분)
+# 양호/취약과 관계없이 "현재 설정 값들만"
 DETAIL_CONTENT=$(cat <<EOF
 ssh_sshd_config_exists=$([ -f "$TARGET_SSHD" ] && echo yes || echo no)
 ssh_sshd_command=${SSH_SSHD_CMD}
@@ -207,7 +207,7 @@ else
   DETAIL_REASON_LINE="${WEAK_ONLY}로 설정되어 있어 이 항목에 대해 취약합니다."
 fi
 
-# guide: 문장별 줄바꿈으로 구성 + 자동조치 위험 + 무엇을 어떻게(조치 방법)
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE=$(cat <<EOF
 이 항목에 대해서 원격 접속 설정을 자동으로 변경할 경우 관리자 접속 차단(락아웃) 및 운영 중 서비스 영향이 발생할 위험이 존재하여 수동 조치가 필요합니다.
 관리자가 직접 확인 후 SSH는 /etc/ssh/sshd_config(또는 include된 설정)에서 PermitRootLogin을 no로 설정하고 sshd 설정을 재적용(예: systemctl reload sshd 또는 재시작)해 주시기 바랍니다.
@@ -215,7 +215,7 @@ Telnet을 사용 중이라면 Telnet 서비스를 비활성화하거나, /etc/pa
 EOF
 )
 
-# RAW_EVIDENCE: 모든 값은 문장 단위 줄바꿈이 가능하며, detail은 "첫 문장(1줄) + 설정값(여러 줄)"
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -227,7 +227,7 @@ $DETAIL_CONTENT",
 EOF
 )
 
-# DB 저장/재조회 및 파이썬 대시보드 복원을 위해 개행을 \n로 보존하며 문자열 escape
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(json_escape_multiline "$RAW_EVIDENCE")
 
 # scan_history 저장용 JSON 출력

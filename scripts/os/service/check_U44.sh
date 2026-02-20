@@ -17,7 +17,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 1. 항목 정보 정의
+# 기본 변수
 ID="U-44"
 CATEGORY="서비스 관리"
 TITLE="tftp, talk 서비스 비활성화"
@@ -42,14 +42,14 @@ SYSTEMD_UNITS=(
 
 CHECK_PATHS="/etc/inetd.conf, /etc/xinetd.d/{tftp,talk,ntalk}, systemd(service/socket)"
 
-# 점검 결과(현재 설정 값) 수집 변수
+# 현재 설정 값 수집 변수
 INETD_ACTIVE_LINES=""
 XINETD_SUMMARY_LINES=""
 XINETD_DISABLE_NO_LINES=""
 SYSTEMD_UNITS_FOUND=""
 SYSTEMD_BAD_UNITS=""
 
-# 취약 사유(설정 값만) 요약용
+# 취약 설정 값
 BAD_SUMMARY=""
 
 # [inetd] /etc/inetd.conf 내 tftp/talk/ntalk 활성 라인(주석/공백 제외) 수집
@@ -116,10 +116,10 @@ else
   STATUS="PASS"
 fi
 
-# 3. 최종 출력 형식(scan_history)
 
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 
+# 점검 명령
 CHECK_COMMAND="$(cat <<'EOF'
 ( [ -f /etc/inetd.conf ] && grep -nEv '^[[:space:]]*#|^[[:space:]]*$' /etc/inetd.conf | grep -nE '^[[:space:]]*(tftp|talk|ntalk)\b' || echo "inetd_conf: none_or_missing" );
 ( [ -d /etc/xinetd.d ] && for f in /etc/xinetd.d/tftp /etc/xinetd.d/talk /etc/xinetd.d/ntalk; do
@@ -144,7 +144,7 @@ EOF
 REASON_LINE=""
 DETAIL_CONTENT=""
 
-# DETAIL_CONTENT: 양호/취약과 무관하게 현재 설정 값만 표시
+# DETAIL_CONTENT 구성
 DETAIL_CONTENT="$(cat <<EOF
 (점검 경로)
 ${CHECK_PATHS}
@@ -163,7 +163,7 @@ ${SYSTEMD_BAD_UNITS:-없음}
 EOF
 )"
 
-# REASON_LINE: 한 문장(줄바꿈 없음), "어떠한 이유"는 설정 값만 사용
+# REASON_LINE 구성
 if [ "$STATUS" = "PASS" ]; then
   REASON_LINE="/etc/inetd.conf에 tftp/talk/ntalk 활성 라인이 없고 /etc/xinetd.d에서 disable=no 설정이 없으며 systemd 관련 유닛이 enabled 또는 active가 아니어서 이 항목에 대해 양호합니다."
 else
@@ -172,8 +172,8 @@ else
   REASON_LINE="${BAD_ONE_LINE} 이 항목에 대해 취약합니다."
 fi
 
-# guide: 취약 시 자동 조치 가정(조치 방법 + 주의사항), 줄바꿈 유지
-GUIDE_LINE="$(cat <<EOF
+# 취약 가정 자동 조치
+GUIDE_LINE=$(cat <<EOF
 자동 조치: 
 /etc/inetd.conf에서 tftp/talk/ntalk 활성 라인을 주석 처리합니다.
 /etc/xinetd.d/{tftp,talk,ntalk}에서 disable=no를 disable=yes로 변경하고 disable 설정이 없으면 disable=yes를 추가합니다.
@@ -182,28 +182,29 @@ systemd에서 관련 service/socket 유닛이 enabled 또는 active이면 stop �
 tftp는 PXE 부팅, 초기 배포, 장비 펌웨어/설정 전송 등에 사용될 수 있어 비활성화 시 관련 절차가 중단될 수 있습니다.
 talk/ntalk는 레거시 통신 환경에서 사용될 수 있어 비활성화 시 해당 기능이 필요했던 사용자/프로세스에 영향이 있을 수 있습니다.
 EOF
-)"
+)
 
-# JSON escape
+# JSON escape 처리 (따옴표, 줄바꿈)
 escape_json_str() {
   printf '%s' "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/\n/\\n/g;s/"/\\"/g'
 }
 
 TARGET_FILE_FOR_EVIDENCE="$CHECK_PATHS"
 
-RAW_EVIDENCE_JSON="$(cat <<EOF
+# raw_evidence 구성
+RAW_EVIDENCE_JSON=$(cat <<EOF
 {
-  "command":"$(escape_json_str "$CHECK_COMMAND")",
-  "detail":"$(escape_json_str "${REASON_LINE}\n${DETAIL_CONTENT}")",
-  "guide":"$(escape_json_str "$GUIDE_LINE")",
-  "target_file":"$(escape_json_str "$TARGET_FILE_FOR_EVIDENCE")"
+  "command":"$CHECK_COMMAND",
+  "detail":"${REASON_LINE}\n${DETAIL_CONTENT}",
+  "guide":"$GUIDE_LINE",
+  "target_file":"$TARGET_FILE_FOR_EVIDENCE"
 }
 EOF
-)"
+)
 
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE_JSON")"
 
-# JSON 출력 직전 빈 줄(프로젝트 규칙)
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

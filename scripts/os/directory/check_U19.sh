@@ -27,44 +27,41 @@ DETAIL_CONTENT=""
 REASON_LINE=""
 GUIDE_LINE=""
 
-# 파일 존재 여부 분기
+# 파일 존재 여부
 if [ -f "$TARGET_FILE" ]; then
   FILE_OWNER=$(stat -c %U "$TARGET_FILE" 2>/dev/null)
   FILE_PERM=$(stat -c %a "$TARGET_FILE" 2>/dev/null)
 
-  # stat 수집 실패 분기
+  # stat 수집 실패
   if [ -z "$FILE_OWNER" ] || [ -z "$FILE_PERM" ]; then
     STATUS="FAIL"
 
-    # 취약 사유(설정값만): 수집 실패 자체를 상태값으로 표현
+    # 취약 사유: 수집 실패 자체 상태값
     REASON_LINE="owner=${FILE_OWNER:-unknown} perm=${FILE_PERM:-unknown} 으로 확인되어 이 항목에 대해 취약합니다."
 
-    # 현재 설정값(항상 출력)
+    # 현재 설정값
     DETAIL_CONTENT="owner=${FILE_OWNER:-unknown}
 perm=${FILE_PERM:-unknown}
 exists=yes
 note=stat_failed_or_empty"
 
-    # 취약 시 가이드(자동 조치 가정)
+    # 취약 가정 자동 조치
     GUIDE_LINE="자동 조치: 
     chown root:root /etc/hosts 수행 후 chmod 644 /etc/hosts를 적용합니다.
     주의사항: 
     /etc/hosts 내용이 서비스 접근/이름해석에 사용되는 환경에서는 잘못된 항목이 존재할 경우 연결 영향이 있을 수 있으니 내용은 변경하지 않고 권한/소유자만 조치해야 합니다."
   else
-    # 권한을 8진수로 안전하게 해석
+    # 권한을 8진수로 해석
     PERM_OCT=$((8#$FILE_PERM))
 
-    # 현재 설정값(항상 출력)
+    # 현재 설정값
     DETAIL_CONTENT="owner=$FILE_OWNER
 perm=$FILE_PERM
 exists=yes"
 
-    # 기준 판정 분기
+    # 기준 판정 
     if [ "$FILE_OWNER" = "root" ] && [ "$PERM_OCT" -le $((8#644)) ] && [ $((PERM_OCT & 8#022)) -eq 0 ]; then
       STATUS="PASS"
-
-      # 양호 사유(설정값만): 한 문장, 줄바꿈 없음
-      REASON_LINE="owner=$FILE_OWNER perm=$FILE_PERM 으로 설정되어 이 항목에 대해 양호합니다."
       
     else
       STATUS="FAIL"
@@ -85,7 +82,7 @@ exists=yes"
 
       REASON_LINE="$VULN_PARTS 으로 설정되어 이 항목에 대해 취약합니다."
 
-      # 취약 시 가이드(자동 조치 가정)
+      # 취약 가정 자동 조치
       GUIDE_LINE="자동 조치: 
       chown root:root /etc/hosts 수행 후 chmod 644 /etc/hosts를 적용합니다.
       주의사항: 
@@ -93,25 +90,25 @@ exists=yes"
     fi
   fi
 else
-  # 파일 미존재 분기
+  # 파일 미존재
   STATUS="FAIL"
 
-  # 취약 사유(설정값만): 파일 상태를 설정값처럼 표현
+  # 취약 사유: 파일 상태 설정값
   REASON_LINE="target_file=$TARGET_FILE state=not_found 으로 확인되어 이 항목에 대해 취약합니다."
 
-  # 현재 설정값(항상 출력)
+  # 현재 설정값
   DETAIL_CONTENT="owner=unknown
 perm=unknown
 exists=no"
 
-  # 취약 시 가이드(자동 조치 가정)
+  # 취약 가정 자동 조치
   GUIDE_LINE="자동 조치: 
   /etc/hosts 복구 후 chown root:root /etc/hosts 및 chmod 644 /etc/hosts를 적용합니다.
   주의사항: 
   파일 생성/복구 과정에서 잘못된 호스트 매핑이 들어가면 이름해석 및 서비스 연결에 영향을 줄 수 있으니, 내용은 백업/검증된 값으로만 복구해야 합니다."
 fi
 
-# raw_evidence 구성 (각 값은 줄바꿈으로 문장 구분 가능하도록 구성)
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

@@ -26,6 +26,7 @@ TARGET_FILE="/etc/pam.d/su"
 SU_BIN="$(command -v su 2>/dev/null)"
 [ -z "$SU_BIN" ] && SU_BIN="/usr/bin/su"
 
+# 점검 명령
 CHECK_COMMAND='(
   if [ -f /etc/pam.d/su ]; then
     grep -nEv "^[[:space:]]*#" /etc/pam.d/su | grep -nE "^[[:space:]]*auth[[:space:]]+required[[:space:]]+pam_wheel\.so" || echo "su_pam_rule_missing"
@@ -71,7 +72,7 @@ if [ -e "$SU_BIN" ]; then
   fi
 fi
 
-# 분기 1: /etc/pam.d/su 존재 시, pam_wheel.so 설정 유무 및 옵션 확인
+# /etc/pam.d/su 존재 시, pam_wheel.so 설정 유무 및 옵션 확인
 if [ -f "$TARGET_FILE" ]; then
   PAM_ACTIVE_LINE="$(grep -Ev '^[[:space:]]*#' "$TARGET_FILE" 2>/dev/null \
     | grep -E '^[[:space:]]*auth[[:space:]]+required[[:space:]]+pam_wheel\.so' \
@@ -108,7 +109,7 @@ su_group=$SU_GROUP
 EOF
 )"
   else
-    # 분기 2: PAM 규칙이 없을 때, su 바이너리 대체 통제 여부 확인
+    # PAM 규칙이 없을 때, su 바이너리 대체 통제 여부 확인
     if [ "$SU_ALT_OK" = "yes" ]; then
       STATUS="PASS"
       REASON_LINE="su_bin=$SU_BIN, perm=$SU_PERM_OCT, group=$SU_GROUP 로 설정되어 이 항목에 대해 양호합니다."
@@ -128,7 +129,7 @@ EOF
 )"
   fi
 else
-  # 분기 3: /etc/pam.d/su 없을 때, su 바이너리 대체 통제 여부 확인
+  # /etc/pam.d/su 없을 때, su 바이너리 대체 통제 여부 확인
   if [ "$SU_ALT_OK" = "yes" ]; then
     STATUS="PASS"
     REASON_LINE="pam_su_file_not_found 및 su_bin=$SU_BIN, perm=$SU_PERM_OCT, group=$SU_GROUP 로 설정되어 이 항목에 대해 양호합니다."
@@ -148,9 +149,10 @@ EOF
 )"
 fi
 
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="자동 조치 시 관리자 권한 정책 및 운영 절차(허용 사용자/그룹, sudo 정책, 접근통제 체계)에 영향을 주어 서비스 접근 장애 또는 권한 설정 오류 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 확인 후 /etc/pam.d/su에 pam_wheel.so 설정(use_uid 또는 group=wheel)을 적용하거나 su 바이너리의 그룹을 wheel로 변경하고 권한을 4750으로 제한해 주시기 바랍니다."
 
-# raw_evidence 구성 (각 문장 줄바꿈 구분 유지)
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -167,6 +169,7 @@ RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

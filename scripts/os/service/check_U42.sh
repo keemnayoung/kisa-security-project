@@ -23,14 +23,14 @@ STATUS="PASS"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 TARGET_FILE="N/A"
 
-# 불필요한 RPC 서비스(가이드 기준)
+# 불필요한 RPC 서비스
 UNNEEDED_RPC_SERVICES=(
   "rpc.cmsd" "rpc.ttdbserverd" "sadmind" "rusersd" "walld" "sprayd" "rstatd"
   "rpc.nisd" "rexd" "rpc.pcnfsd" "rpc.statd" "rpc.ypupdated" "rpc.rquotad"
   "kcms_server" "cachefsd"
 )
 
-# 점검 명령(보고서/추적용)
+# 점검 명령
 CHECK_COMMAND='
 ( [ -f /etc/inetd.conf ] && grep -nEv "^[[:space:]]*#" /etc/inetd.conf 2>/dev/null ) || echo "inetd_conf_not_found";
 ( [ -d /etc/xinetd.d ] && for f in /etc/xinetd.d/*; do [ -f "$f" ] && (echo "### $f"; grep -nEv "^[[:space:]]*#" "$f" 2>/dev/null); done | head -n 300 ) || echo "xinetd_dir_not_found";
@@ -43,12 +43,12 @@ CHECK_COMMAND='
 DETAIL_CONTENT=""
 REASON_LINE=""
 
-# 현재 설정값(탐지 결과)을 PASS/FAIL과 무관하게 담는 컨테이너
+# 현재 설정값
 INETD_FINDINGS=()
 XINETD_FINDINGS=()
 SYSTEMD_FINDINGS=()
 
-# 취약한 경우에만 “취약 원인(설정값)”으로 사용할 요약 컨테이너
+# 취약한 설정
 VULN_SETTINGS=()
 
 # inetd 기반 점검: /etc/inetd.conf에서 불필요 서비스 라인이 주석 제외 상태로 존재하는지 확인
@@ -110,7 +110,7 @@ else
   SYSTEMD_FINDINGS+=("systemctl_not_found")
 fi
 
-# DETAIL_CONTENT: 현재 설정값(탐지 결과)만 출력(PASS/FAIL 공통)
+# DETAIL_CONTENT 구성
 DETAIL_CONTENT=$(
   printf "inetd_current_settings:\n"
   printf "%s\n\n" "${INETD_FINDINGS[@]}"
@@ -120,15 +120,16 @@ DETAIL_CONTENT=$(
   printf "%s\n" "${SYSTEMD_FINDINGS[@]}"
 )
 
-# guide: 취약일 때 자동 조치 가정(조치 방법 + 주의사항)
-GUIDE_LINE=$(
-  printf "자동 조치: \n"
-  printf "1) inetd 사용 시 /etc/inetd.conf에서 불필요 RPC 서비스 라인을 주석 처리하고(서비스명 기준) inetd를 재시작합니다.\n"
-  printf "2) xinetd 사용 시 /etc/xinetd.d/*에서 해당 service 블록의 disable 값을 yes로 변경하거나, disable 항목이 없다면 disable=yes를 삽입한 뒤 xinetd를 재시작합니다.\n"
-  printf "3) systemd 사용 시 해당 유닛이 존재하면 stop 후 disable 및 필요 시 mask 처리합니다.\n"
-  printf "주의사항: \n"
-  printf "NFS 등에서 rpcbind/rpc.statd 계열이 의존될 수 있어, 자동으로 중지/비활성화하면 파일 공유/마운트/상태 동기화 기능에 영향이 생길 수 있습니다.\n"
-  printf "또한 /etc/xinetd.d 내 백업 파일을 같은 디렉터리에 남기면 점검 로직이 백업 파일까지 포함해 오탐(Fail)을 유발할 수 있으므로 백업은 별도 경로에 보관하는 방식이 안전합니다.\n"
+# 취약 가정 자동 조치
+GUIDE_LINE=$(cat <<'EOF'
+자동 조치: 
+1) inetd 사용 시 /etc/inetd.conf에서 불필요 RPC 서비스 라인을 주석 처리하고(서비스명 기준) inetd를 재시작합니다.
+2) xinetd 사용 시 /etc/xinetd.d/*에서 해당 service 블록의 disable 값을 yes로 변경하거나, disable 항목이 없다면 disable=yes를 삽입한 뒤 xinetd를 재시작합니다.
+3) systemd 사용 시 해당 유닛이 존재하면 stop 후 disable 및 필요 시 mask 처리합니다.
+주의사항: 
+NFS 등에서 rpcbind/rpc.statd 계열이 의존될 수 있어, 자동으로 중지/비활성화하면 파일 공유/마운트/상태 동기화 기능에 영향이 생길 수 있습니다.
+또한 /etc/xinetd.d 내 백업 파일을 같은 디렉터리에 남기면 점검 로직이 백업 파일까지 포함해 오탐(Fail)을 유발할 수 있으므로 백업은 별도 경로에 보관하는 방식이 안전합니다.
+EOF
 )
 
 # 종합 판정 및 RAW_EVIDENCE.detail 문구 구성
@@ -142,7 +143,7 @@ else
   REASON_LINE="inetd·xinetd·systemd에서 불필요 RPC 서비스가 활성 상태(주석 제외 라인, disable=no, enabled/active)로 확인되지 않아 이 항목에 대해 양호합니다."
 fi
 
-# RAW_EVIDENCE 구성(각 값은 줄바꿈으로 문장 구분 가능)
+# RAW_EVIDENCE 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -153,7 +154,7 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# JSON escape 처리(따옴표, 줄바꿈) - DB 저장/재로딩 시 줄바꿈 유지용
+# JSON escape 처리(따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')

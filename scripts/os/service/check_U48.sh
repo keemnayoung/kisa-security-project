@@ -17,6 +17,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
+# 기본 변수
 ID="U-48"
 CATEGORY="서비스 관리"
 TITLE="expn, vrfy 명령어 제한"
@@ -27,11 +28,13 @@ SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 
 CHECK_COMMAND='(systemctl is-active postfix 2>/dev/null; systemctl is-active sendmail 2>/dev/null; systemctl is-active sm-mta 2>/dev/null; systemctl is-active exim 2>/dev/null); (test -f /etc/mail/sendmail.cf && grep -inE "^[[:space:]]*O[[:space:]]+PrivacyOptions" /etc/mail/sendmail.cf); (test -f /etc/postfix/main.cf && grep -inE "^[[:space:]]*disable_vrfy_command[[:space:]]*=" /etc/postfix/main.cf); (test -f /etc/exim/exim.conf && grep -inE "^[[:space:]]*acl_smtp_(vrfy|expn)[[:space:]]*=" /etc/exim/exim.conf); (test -f /etc/exim4/exim4.conf && grep -inE "^[[:space:]]*acl_smtp_(vrfy|expn)[[:space:]]*=" /etc/exim4/exim4.conf)'
 
+# JSON escape 처리 (따옴표, 줄바꿈, 백슬래시)
 escape_json_str() {
-  # 백슬래시/줄바꿈/따옴표를 JSON 문자열로 안전하게 변환
+  
   printf '%s' "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/\n/\\n/g;s/"/\\"/g'
 }
 
+# 시스템 활성화 여부
 is_active() {
   systemctl is-active --quiet "$1" 2>/dev/null
 }
@@ -76,7 +79,7 @@ POSTFIX_AFTER="disable_vrfy_command_not_found"
 EXIM_AFTER1="acl_smtp_rules_not_found"
 EXIM_AFTER2="acl_smtp_rules_not_found"
 
-# Sendmail 분기: 설치/활성/설정 존재 여부에 따라 판정 근거를 수집
+# Sendmail 점검: 설치/활성/설정 존재 여부에 따라 판정 근거를 수집
 if command -v sendmail >/dev/null 2>&1 || [ -f "$SENDMAIL_CF" ]; then
   SENDMAIL_INSTALLED=1
   FOUND_ANY=1
@@ -107,7 +110,7 @@ if command -v sendmail >/dev/null 2>&1 || [ -f "$SENDMAIL_CF" ]; then
   fi
 fi
 
-# Postfix 분기: 설치/활성/설정 존재 여부에 따라 판정 근거를 수집
+# Postfix 점검: 설치/활성/설정 존재 여부에 따라 판정 근거를 수집
 if command -v postfix >/dev/null 2>&1 || [ -f "$POSTFIX_CF" ]; then
   POSTFIX_INSTALLED=1
   FOUND_ANY=1
@@ -118,7 +121,7 @@ if command -v postfix >/dev/null 2>&1 || [ -f "$POSTFIX_CF" ]; then
       TARGET_FILES+=("$POSTFIX_CF")
       add_file_hash "$POSTFIX_CF"
 
-      # 현재 설정(활성 라인 우선)
+      # 현재 설정
       POSTFIX_LINE="$(grep -nEv '^[[:space:]]*#' "$POSTFIX_CF" 2>/dev/null | grep -inE '^[[:space:]]*disable_vrfy_command[[:space:]]*=' | tail -n 1)"
       [ -z "$POSTFIX_LINE" ] && POSTFIX_LINE="$(grep -inE '^[[:space:]]*disable_vrfy_command[[:space:]]*=' "$POSTFIX_CF" 2>/dev/null | tail -n 1)"
       POSTFIX_AFTER="${POSTFIX_LINE:-disable_vrfy_command_not_found}"
@@ -136,7 +139,7 @@ if command -v postfix >/dev/null 2>&1 || [ -f "$POSTFIX_CF" ]; then
   fi
 fi
 
-# Exim 분기: 설치/활성/설정 존재 여부에 따라 판정 근거를 수집
+# Exim 점검: 설치/활성/설정 존재 여부에 따라 판정 근거를 수집
 if command -v exim >/dev/null 2>&1 || command -v exim4 >/dev/null 2>&1 || [ -f "$EXIM_CONF1" ] || [ -f "$EXIM_CONF2" ]; then
   EXIM_INSTALLED=1
   FOUND_ANY=1
@@ -181,7 +184,7 @@ TARGET_FILE="$(printf "%s\n" "${TARGET_FILES[@]}" | awk 'NF' | sort -u)"
 HASH_SUMMARY="$(printf "%s\n" "${HASH_LINES[@]}" | awk 'NF' | sort -u)"
 [ -z "$HASH_SUMMARY" ] && HASH_SUMMARY="N/A"
 
-# 최종 판정 분기: 미설치/미사용(active 없음)/active 존재 시 설정 충족 여부로 PASS/FAIL 결정
+# 최종 판정 점검: 미설치/미사용(active 없음)/active 존재 시 설정 충족 여부로 PASS/FAIL 결정
 if [ $FOUND_ANY -eq 0 ]; then
   STATUS="PASS"
   REASON_ONE_LINE="메일 서비스가 설치되어 있지 않아 이 항목에 대해 양호합니다."
@@ -195,12 +198,6 @@ else
     [ -z "$VULN_BRIEF" ] && VULN_BRIEF="expn/vrfy 제한 설정이 미흡함"
     REASON_ONE_LINE="${VULN_BRIEF}로 설정되어 있어 이 항목에 대해 취약합니다."
 
-    GUIDE_LINE="자동 조치: 
-    Postfix는 /etc/postfix/main.cf에 disable_vrfy_command = yes를 추가/수정한 뒤 reload를 수행합니다.
-    Sendmail은 /etc/mail/sendmail.cf의 PrivacyOptions에 goaway(또는 noexpn,novrfy)를 반영한 뒤 서비스를 재시작합니다.
-    Exim은 acl_smtp_vrfy/acl_smtp_expn의 accept 허용 설정을 제거(또는 주석 처리)한 뒤 서비스를 재시작합니다.
-    주의사항:
-    설정 파일 변경 및 reload/restart 과정에서 순간적인 메일 처리 지연이 발생할 수 있으며 운영 정책(계정 검증/ACL 흐름)과 충돌할 수 있으니 적용 전 백업과 사전 테스트가 필요합니다."
   else
     STATUS="PASS"
     OK_BRIEF="$(printf "%s\n" "${PASS_PARTS[@]}" | awk 'NF' | head -n 1)"
@@ -209,7 +206,15 @@ else
   fi
 fi
 
-# DETAIL_CONTENT: 양호/취약과 무관하게 현재 설정 값(및 상태/대상 파일/해시)을 모두 표시
+    # 취약 가정 자동 조치
+    GUIDE_LINE="자동 조치: 
+    Postfix는 /etc/postfix/main.cf에 disable_vrfy_command = yes를 추가/수정한 뒤 reload를 수행합니다.
+    Sendmail은 /etc/mail/sendmail.cf의 PrivacyOptions에 goaway(또는 noexpn,novrfy)를 반영한 뒤 서비스를 재시작합니다.
+    Exim은 acl_smtp_vrfy/acl_smtp_expn의 accept 허용 설정을 제거(또는 주석 처리)한 뒤 서비스를 재시작합니다.
+    주의사항:
+    설정 파일 변경 및 reload/restart 과정에서 순간적인 메일 처리 지연이 발생할 수 있으며 운영 정책(계정 검증/ACL 흐름)과 충돌할 수 있으니 적용 전 백업과 사전 테스트가 필요합니다."
+
+# DETAIL_CONTENT 구성
 DETAIL_LINES="$(cat <<EOF
 현재 서비스 상태: postfix=${POSTFIX_ACTIVE}, sendmail=${SENDMAIL_ACTIVE}, exim=${EXIM_ACTIVE}
 현재 설정 값: postfix(main.cf) ${POSTFIX_AFTER}
@@ -220,6 +225,7 @@ DETAIL_LINES="$(cat <<EOF
 EOF
 )"
 
+# raw_evidence 구성
 RAW_EVIDENCE_JSON="$(cat <<EOF
 {
   "command":"$(escape_json_str "$CHECK_COMMAND")",
@@ -232,6 +238,7 @@ EOF
 
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE_JSON")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

@@ -26,6 +26,7 @@ TARGET_FILE_CHRONY2="/etc/chrony/chrony.conf"
 TARGET_FILE="${TARGET_FILE_NTP} ${TARGET_FILE_CHRONY1} ${TARGET_FILE_CHRONY2}"
 TARGET_FILE_NL="${TARGET_FILE_NTP}\n${TARGET_FILE_CHRONY1}\n${TARGET_FILE_CHRONY2}"
 
+# 점검 명령
 CHECK_COMMAND='
 systemctl list-units --type=service | grep -E "ntp|chrony" || echo "no_ntp_or_chrony_unit";
 command -v ntpq >/dev/null 2>&1 && ntpq -pn 2>/dev/null | head -n 30 || echo "ntpq_cmd_not_found";
@@ -83,7 +84,7 @@ if command -v chronyc >/dev/null 2>&1; then
   chronyc sources 2>/dev/null | grep -Eq '^[[:space:]]*\^(\*|\+)' && CHRONY_SYNC="yes"
 fi
 
-# 현재 설정값(DETAIL_CONTENT) 구성: 양호/취약 관계없이 현재값만 표시
+# DETAIL_CONTENT 구성
 DETAIL_CONTENT="NTP
 service(list-units): ${NTP_UNIT_STATE}
 conf: ${NTP_CONF:-not_found} (server/pool=${NTP_CONF_OK})
@@ -103,15 +104,13 @@ conf_lines:
 ${CHRONY_CONF_LINES}"
 
 # 최종 판정
-# PASS 조건: (NTP active + conf ok + sync ok) 또는 (Chrony active + conf ok + sync ok)
+# 양호 조건: (NTP active + conf ok + sync ok) 또는 (Chrony active + conf ok + sync ok)
 NTP_OK=0
 CHRONY_OK=0
 [ "$NTP_UNIT_STATE" = "active" ] && [ "$NTP_CONF_OK" = "yes" ] && [ "$NTP_SYNC" = "yes" ] && NTP_OK=1
 [ "$CHRONY_UNIT_STATE" = "active" ] && [ "$CHRONY_CONF_OK" = "yes" ] && [ "$CHRONY_SYNC" = "yes" ] && CHRONY_OK=1
 
 # 이유 문장 생성
-# 양호: 만족한 쪽의 "설정값"만으로 한 문장
-# 취약: 취약한 부분의 "설정값"만으로 한 문장
 REASON_SENTENCE=""
 
 if [ "$NTP_OK" -eq 1 ] || [ "$CHRONY_OK" -eq 1 ]; then
@@ -124,7 +123,7 @@ if [ "$NTP_OK" -eq 1 ] || [ "$CHRONY_OK" -eq 1 ]; then
 else
   STATUS="FAIL"
   FAIL_BITS=""
-  # 취약 사유는 "취약한 설정값만" 보여주기
+  # 취약 사유
   [ "$NTP_UNIT_STATE" != "active" ] && FAIL_BITS="${FAIL_BITS}ntp_service=${NTP_UNIT_STATE}\n"
   [ "$NTP_CONF_OK" != "yes" ] && FAIL_BITS="${FAIL_BITS}ntp_conf=${NTP_CONF:-not_found} server/pool=${NTP_CONF_OK}\n"
   [ "$NTP_SYNC" != "yes" ] && FAIL_BITS="${FAIL_BITS}ntp_sync=${NTP_SYNC}\n"
@@ -135,13 +134,13 @@ else
   REASON_SENTENCE="${FAIL_BITS} 로 설정되어 있어 이 항목에 대해 취약합니다."
 fi
 
-# guide 문장(줄바꿈으로 구분)
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="시간 동기화 설정을 자동으로 변경하면 시간 의존 서비스(인증/로그/배치/모니터링 등)에 영향이 발생할 수 있는 위험이 존재하여 수동 조치가 필요합니다.
 관리자가 직접 허용된 NTP 서버 목록과 동기화 정책을 확인 후 NTP 또는 Chrony 설정 파일에 server/pool 값을 반영해 주시기 바랍니다.
 설정 적용 후 systemctl restart ntp 또는 systemctl restart chrony를 수행하고 ntpq -pn 또는 chronyc sources로 동기화 상태를 확인해 주시기 바랍니다.
 동기화 주기 조정이 필요하면 환경 정책에 맞게 minpoll/maxpoll 등 관련 값을 검토해 주시기 바랍니다."
 
-# RAW_EVIDENCE 구성
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -153,8 +152,10 @@ $DETAIL_CONTENT",
 EOF
 )
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(json_escape "$RAW_EVIDENCE")"
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

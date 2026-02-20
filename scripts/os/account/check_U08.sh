@@ -23,36 +23,38 @@ STATUS="PASS"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 
 TARGET_FILE="/etc/group,/etc/passwd"
+
+# 점검 명령
 CHECK_COMMAND='[ -f /etc/group ] && (grep -E "^root:x:0:" /etc/group || echo "root_group_line_not_found") || echo "group_file_not_found"; [ -f /etc/passwd ] && awk -F: '"'"'($4==0 && $1!="root"){print $1":"$3":"$7}'"'"' /etc/passwd || echo "passwd_file_not_found"'
 
 DETAIL_CONTENT=""
 ROOT_GROUP_USERS=""
 EXTRA_USERS=""
-PRIMARY_GID0_USERS=""            # (취약 후보) 예외 제외 후 남는 GID=0 사용자(이름만)
-PRIMARY_GID0_EXCLUDED_USERS=""   # (예외) 시스템 계정으로 제외된 사용자(근거 포함)
+PRIMARY_GID0_USERS=""            # 취약 후보: 예외 제외 후 남는 GID=0 사용자(이름만)
+PRIMARY_GID0_EXCLUDED_USERS=""   # 예외: 시스템 계정으로 제외된 사용자(근거 포함)
 
-# UID_MIN은 일반 사용자 시작 UID 기준이며, 시스템 계정 분류에 사용합니다.
+# UID_MIN은 일반 사용자 시작 UID 기준, 시스템 계정 분류에 사용
 UID_MIN=$(awk '/^[[:space:]]*UID_MIN[[:space:]]+/{print $2; exit}' /etc/login.defs 2>/dev/null)
 if ! [[ "$UID_MIN" =~ ^[0-9]+$ ]]; then
   UID_MIN=1000
 fi
 
-# 일부 기본 시스템 계정은 환경에 따라 shell 값이 다를 수 있어, UID<UID_MIN 조건 하에 이름으로 예외 허용합니다.
+# 일부 기본 시스템 계정은 환경에 따라 shell 값이 다를 수 있어, UID<UID_MIN 조건 하에 이름으로 예외 허용
 PRIMARY_GID0_NAME_ALLOWLIST="sync shutdown halt"
 
-# /etc/group이 없으면 root 그룹 구성원을 확인할 수 없습니다.
+# /etc/group이 없으면 root 그룹 구성원을 확인할 수 없음
 if [ -f "/etc/group" ]; then
-  # /etc/group의 root 그룹(=GID 0) 멤버 필드(4번째)를 확인합니다.
+  # /etc/group의 root 그룹(=GID 0) 멤버 필드(4번째)를 확인
   ROOT_GROUP_USERS=$(grep -E '^root:x:0:' "/etc/group" 2>/dev/null | cut -d: -f4 | tail -n 1)
 
-  # 보조 그룹 멤버로 포함된 계정 중 root 이외 계정만 추출합니다.
+  # 보조 그룹 멤버로 포함된 계정 중 root 이외 계정만 추출
   EXTRA_USERS=$(echo "$ROOT_GROUP_USERS" \
       | tr ',' '\n' \
       | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' \
       | grep -v '^root$' \
       | grep -v '^$' )
 
-  # /etc/passwd의 주 그룹(GID=0) 계정을 확인하고, 시스템 계정 예외를 제외합니다.
+  # /etc/passwd의 주 그룹(GID=0) 계정을 확인, 시스템 계정 예외를 제외
   if [ -f "/etc/passwd" ]; then
     while IFS=: read -r u uid sh; do
       if ! [[ "$uid" =~ ^[0-9]+$ ]]; then
@@ -78,7 +80,7 @@ if [ -f "/etc/group" ]; then
     PRIMARY_GID0_USERS="passwd_file_not_found"
   fi
 
-  # DETAIL_CONTENT는 양호/취약과 관계 없이 "현재 설정 값"만 출력합니다.
+  # DETAIL_CONTENT 구성
   if [ -n "$ROOT_GROUP_USERS" ]; then
     DETAIL_CONTENT="root_group_members=$ROOT_GROUP_USERS"
   else
@@ -97,14 +99,14 @@ if [ -f "/etc/group" ]; then
     DETAIL_CONTENT="${DETAIL_CONTENT}"$'\n'"primary_gid0_users_excluded=empty"
   fi
 
-  # 판단 분기: 취약 조건은 (1) /etc/group에 root 외 멤버 존재 또는 (2) 예외 제외 후 GID=0 계정 존재
+  # 취약 조건은 /etc/group에 root 외 멤버 존재 또는 예외 제외 후 GID=0 계정 존재
   if [ -z "$EXTRA_USERS" ] && [ -z "$PRIMARY_GID0_USERS" ]; then
     STATUS="PASS"
-    # 양호 사유(설정 값만 사용) + 한 문장
+    # 양호 사유
     REASON_LINE="root_group_members=${ROOT_GROUP_USERS:-empty}, primary_gid0_users_detected=empty로 이 항목에 대해 양호합니다."
   else
     STATUS="FAIL"
-    # 취약 사유는 취약 부분 설정만 포함 + 한 문장
+    # 취약 사유
     VULN_PARTS=""
     if [ -n "$EXTRA_USERS" ]; then
       VULN_PARTS="root_group_extra_members=$(echo "$EXTRA_USERS" | tr '\n' ',' | sed 's/,$//')"
@@ -117,14 +119,15 @@ if [ -f "/etc/group" ]; then
   fi
 else
   STATUS="FAIL"
-  # /etc/group이 없으면 설정 확인 자체가 불가하므로 취약으로 판단(취약 부분 설정만)
+  # /etc/group이 없으면 설정 확인 자체가 불가하므로 취약으로 판단
   REASON_LINE="target_file=/etc/group missing로 이 항목에 대해 취약합니다."
   DETAIL_CONTENT="group_file_not_found"
 fi
 
-# RAW_EVIDENCE: 문장/항목은 줄바꿈으로 구분되며, DB 저장/로드 후에도 줄바꿈이 유지되도록 escape 처리합니다.
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="자동 조치 시 시스템 계정(예: 기본 시스템 계정/서비스 계정)의 그룹 변경으로 서비스 장애 또는 권한 문제(파일 접근 실패 등)가 발생할 수 있어 수동 조치가 필요합니다.\n관리자가 root 그룹(GID 0) 멤버 및 GID=0 주 그룹 계정의 UID/SHELL/용도를 직접 확인 후, 불필요 계정은 root 그룹에서 제거(gpasswd -d <user> root)하고 주 그룹이 0인 계정은 정책에 맞는 그룹으로 변경(usermod -g <target_group> <user>)해 주시기 바랍니다."
 
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

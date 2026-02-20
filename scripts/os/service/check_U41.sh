@@ -46,11 +46,11 @@ AUTOFS_SVC_ENABLED="$(systemctl is-enabled autofs.service 2>/dev/null || echo un
 AUTOFS_SOCK_ACTIVE="$(systemctl is-active autofs.socket 2>/dev/null || echo unknown)"
 AUTOFS_SOCK_ENABLED="$(systemctl is-enabled autofs.socket 2>/dev/null || echo unknown)"
 
-# 현재 설정값(DETAIL_CONTENT): 양호/취약과 무관하게 '현재 값'만 기록
+# DETAIL_CONTENT 구성
 DETAIL_CONTENT="autofs.service: active=${AUTOFS_SVC_ACTIVE}, enabled=${AUTOFS_SVC_ENABLED}
 autofs.socket: active=${AUTOFS_SOCK_ACTIVE}, enabled=${AUTOFS_SOCK_ENABLED}"
 
-# 자동 조치 가정 가이드(guide): 취약 상황을 가정하여 조치 방법 + 주의사항을 문장별 줄바꿈으로 기록
+# 취약 가정 자동 조치
 GUIDE_LINE="자동 조치:
 autofs.service 및 autofs.socket에 대해 stop 후 disable을 적용하고, 필요 시 mask로 재활성화를 방지합니다.
 주의사항: 
@@ -64,7 +64,7 @@ if [ "$AUTOFS_SVC_ACTIVE" = "active" ] || [ "$AUTOFS_SVC_ENABLED" = "enabled" ] 
   VULN=1
 fi
 
-# 분기 1) 취약(FAIL): 취약한 부분의 설정만 '이유'에 포함
+# 취약 판정
 if [ "$VULN" -eq 1 ]; then
   STATUS="FAIL"
   BAD_PARTS=""
@@ -80,13 +80,12 @@ if [ "$VULN" -eq 1 ]; then
   fi
   REASON_LINE="${BAD_PARTS}로 설정되어 있어 이 항목에 대해 취약합니다."
 else
-  # 분기 2) 양호(PASS): 양호한 상태를 보여주는 현재 설정을 '이유'에 포함
+  # 양호 판정
   STATUS="PASS"
   REASON_LINE="autofs.service(active=${AUTOFS_SVC_ACTIVE}, enabled=${AUTOFS_SVC_ENABLED}) 및 autofs.socket(active=${AUTOFS_SOCK_ACTIVE}, enabled=${AUTOFS_SOCK_ENABLED})로 설정되어 있어 이 항목에 대해 양호합니다."
 fi
 
 # raw_evidence 구성
-# - command/detail/guide/target_file 모두 문장 단위 줄바꿈이 가능하도록 원문에 개행 포함
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

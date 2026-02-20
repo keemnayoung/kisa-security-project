@@ -56,7 +56,7 @@ ensure_pam_sha512() {
   return 1
 }
 
-# 조치 수행: login.defs 및 PAM 설정 수정 분기점
+# 조치 수행: login.defs 및 PAM 설정 수정
 if [ -f "$DEFS_FILE" ]; then
   # 1) login.defs 암호화 알고리즘 수정
   CURRENT_VAL=$(grep -E '^[[:space:]]*ENCRYPT_METHOD[[:space:]]+' "$DEFS_FILE" 2>/dev/null | tail -n 1 | awk '{print $2}' | tr -d '[:space:]')
@@ -72,7 +72,7 @@ if [ -f "$DEFS_FILE" ]; then
     MODIFIED=1
   fi
 
-  # 2) PAM 설정 파일 수정 분기점
+  # 2) PAM 설정 파일 수정
   PAM_MOD_MSGS=""
 
   ensure_pam_sha512 "$PAM_SYSTEM_AUTH"
@@ -102,7 +102,7 @@ if [ -f "$DEFS_FILE" ]; then
     PAM_MOD_MSGS="${PAM_MOD_MSGS}password-auth: 파일 없음"$'\n'
   fi
 
-  # 조치 후 최종 설정 상태 데이터 수집 분기점
+  # 조치 후 최종 설정 상태 데이터 수집
   AFTER_LINE_DEFS=$(grep -nE '^[[:space:]]*ENCRYPT_METHOD[[:space:]]+' "$DEFS_FILE" 2>/dev/null | tail -n 1 | sed '/^[[:space:]]*$/d')
   RESULT_VAL=$(grep -E '^[[:space:]]*ENCRYPT_METHOD[[:space:]]+' "$DEFS_FILE" 2>/dev/null | tail -n 1 | awk '{print $2}' | tr -d '[:space:]')
 
@@ -112,12 +112,12 @@ if [ -f "$DEFS_FILE" ]; then
     AFTER_LINE_PW=$(grep -nE '^[[:space:]]*password[[:space:]]+.*pam_unix\.so' "$PAM_PASSWORD_AUTH" 2>/dev/null | sed '/^[[:space:]]*$/d' | tail -n 3)
   fi
 
-  # DETAIL_CONTENT 구성 (현재 설정값 정보만 나열)
+  # DETAIL_CONTENT 구성
   DETAIL_CONTENT="login_defs_setting: $AFTER_LINE_DEFS
 system_auth_setting: $AFTER_LINE_SYS
 password_auth_setting: ${AFTER_LINE_PW:-not_found/skip}"
 
-  # 최종 성공 판정 및 REASON_LINE 구성 분기점
+  # 최종 성공 판정 및 REASON_LINE 구성
   SYS_HAS_SAFE=$(grep -Ei '^[[:space:]]*password[[:space:]]+.*pam_unix\.so' "$PAM_SYSTEM_AUTH" 2>/dev/null | grep -Eqi '(^|[[:space:]])(sha512|sha256|yescrypt)($|[[:space:]])'; echo $?)
   
   if [ "$RESULT_VAL" = "SHA512" ] && [ $SYS_HAS_SAFE -eq 0 ] && [ $ERR_FLAG -eq 0 ]; then
@@ -143,7 +143,7 @@ else
   DETAIL_CONTENT="target_file_not_found"
 fi
 
-# RAW_EVIDENCE 구성 및 JSON 이스케이프
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -157,7 +157,7 @@ RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 결과 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

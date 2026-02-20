@@ -15,7 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 설정 분기점
+# 기본 변수 설정
 ID="U-48"
 CATEGORY="서비스관리"
 TITLE="expn, vrfy 명령어 제한"
@@ -26,7 +26,7 @@ SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 AFTER_LINES=()
 TARGET_FILES=()
 
-# 유틸리티 함수 정의 분기점
+# 유틸리티 함수 정의
 is_active() {
   systemctl is-active --quiet "$1" 2>/dev/null
 }
@@ -41,7 +41,7 @@ add_after_line() {
   [ -n "$s" ] && AFTER_LINES+=("$s")
 }
 
-# Sendmail 서비스 조치 분기점
+# Sendmail 서비스 조치
 SENDMAIL_CF="/etc/mail/sendmail.cf"
 SENDMAIL_INSTALLED=0
 if command -v sendmail >/dev/null 2>&1 || [ -f "$SENDMAIL_CF" ]; then
@@ -74,7 +74,7 @@ if [ $SENDMAIL_INSTALLED -eq 1 ]; then
   fi
 fi
 
-# Postfix 서비스 조치 분기점
+# Postfix 서비스 조치
 POSTFIX_CF="/etc/postfix/main.cf"
 POSTFIX_INSTALLED=0
 if command -v postfix >/dev/null 2>&1 || [ -f "$POSTFIX_CF" ]; then
@@ -101,7 +101,7 @@ if [ $POSTFIX_INSTALLED -eq 1 ]; then
   fi
 fi
 
-# Exim 서비스 조치 분기점
+# Exim 서비스 조치
 EXIM_INSTALLED=0
 if command -v exim >/dev/null 2>&1 || [ -f /etc/exim/exim.conf ] || [ -f /etc/exim4/exim4.conf ]; then
   EXIM_INSTALLED=1
@@ -128,7 +128,7 @@ if [ $EXIM_INSTALLED -eq 1 ]; then
   fi
 fi
 
-# 조치 후 최종 검증 및 판정 분기점
+# 조치 후 최종 검증 및 판정
 FOUND_ACTIVE=0
 VERIFY_FAIL=0
 
@@ -146,7 +146,7 @@ if [ $EXIM_INSTALLED -eq 1 ] && (is_active "exim" || is_active "exim4"); then
    grep -nEv '^[[:space:]]*#' /etc/exim4/exim4.conf 2>/dev/null | grep -qiE 'acl_smtp_(vrfy|expn)[[:space:]]*=[[:space:]]*accept') && VERIFY_FAIL=1
 fi
 
-# REASON_LINE 및 DETAIL_CONTENT 구성 분기점
+# REASON_LINE 및 DETAIL_CONTENT 구성
 REASON_LINE=""
 if [ $FOUND_ACTIVE -eq 0 ]; then
   STATUS="PASS"
@@ -161,7 +161,7 @@ fi
 
 DETAIL_CONTENT="$(printf "%s\n" "${AFTER_LINES[@]}")"
 
-# 결과 데이터 출력 분기점
+# 결과 데이터 구성
 TARGET_FILE_FINAL="$(printf "%s\n" "${TARGET_FILES[@]}" | awk 'NF' | sort -u | tr '\n' ',' | sed 's/,$//')"
 CHECK_COMMAND="grep -E 'PrivacyOptions|disable_vrfy_command|acl_smtp' (SMTP config files)"
 
@@ -169,6 +169,7 @@ json_escape() {
   printf '%s' "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/\n/\\n/g;s/"/\\"/g'
 }
 
+# raw_evidence 구성
 RAW_EVIDENCE_JSON=$(cat <<EOF
 {
   "command": "$(json_escape "$CHECK_COMMAND")",

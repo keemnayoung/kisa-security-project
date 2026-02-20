@@ -15,7 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 설정 분기점
+# 기본 변수 설정
 ID="U-62"
 ACTION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 IS_SUCCESS=0
@@ -25,7 +25,7 @@ REASON_LINE=""
 DETAIL_CONTENT=""
 ACTION_ERR_LOG=""
 
-# 유틸리티 함수 정의 분기점
+# 유틸리티 함수 정의
 append_detail(){ [ -n "${1:-}" ] && DETAIL_CONTENT="${DETAIL_CONTENT}${DETAIL_CONTENT:+\n}$1"; }
 append_err(){ [ -n "${1:-}" ] && ACTION_ERR_LOG="${ACTION_ERR_LOG}${ACTION_ERR_LOG:+\n}$1"; }
 json_escape(){ echo "$1" | sed 's/\\/\\\\/g; s/"/\\"/g; :a;N;$!ba;s/\n/\\n/g'; }
@@ -65,7 +65,7 @@ fail_now(){
   [ -n "${1:-}" ] && append_detail "$1"
 }
 
-# 권한 확인 분기점
+# 권한 확인
 if [ "${EUID:-$(id -u)}" -ne 0 ]; then
   IS_SUCCESS=0
   REASON_LINE="root 권한이 아니어서 설정 파일을 수정할 수 없는 이유로 조치에 실패하여 여전히 이 항목에 대해 취약합니다."
@@ -73,7 +73,7 @@ if [ "${EUID:-$(id -u)}" -ne 0 ]; then
 else
   IS_SUCCESS=1
 
-  # OS 배너(motd, issue, issue.net) 조치 분기점
+  # OS 배너(motd, issue, issue.net) 조치
   for f in /etc/motd /etc/issue /etc/issue.net; do
     if ensure_file "$f"; then
       append_detail "banner_file_status($f): warning_message_applied"
@@ -83,7 +83,7 @@ else
     fi
   done
 
-  # SSH 서비스 배너 설정 분기점
+  # SSH 서비스 배너 설정
   SSHD_CONF="/etc/ssh/sshd_config"
   if svc_active sshd; then
     if [ -f "$SSHD_CONF" ]; then
@@ -103,7 +103,7 @@ else
     append_detail "ssh_service_status: inactive(skipped)"
   fi
 
-  # 활성 네트워크 서비스(Mail, FTP, DNS) 배너 조치 분기점
+  # 활성 네트워크 서비스(Mail, FTP, DNS) 배너 조치
   if svc_active postfix && [ -f /etc/postfix/main.cf ]; then
     set_kv_file /etc/postfix/main.cf '^[[:space:]]*smtpd_banner[[:space:]]*=' 'smtpd_banner = ESMTP' >/dev/null 2>&1
     systemctl restart postfix >/dev/null 2>&1 || true
@@ -127,7 +127,7 @@ else
     append_detail "bind_version_masking: $(grep -E '^[[:space:]]*version[[:space:]]+' /etc/named.conf 2>/dev/null | tail -n 1 | xargs)"
   fi
 
-  # 최종 판정 분기점
+  # 최종 판정
   if [ "$IS_SUCCESS" -eq 1 ]; then
     REASON_LINE="서버 접속 배너 파일과 활성 서비스의 Banner 설정을 적용하여 조치를 완료하여 이 항목에 대해 양호합니다."
   else
@@ -135,7 +135,7 @@ else
   fi
 fi
 
-# 결과 데이터 출력 분기점
+# 결과 데이터 출력
 [ -n "$ACTION_ERR_LOG" ] && append_detail "[Error_Log]\n$ACTION_ERR_LOG"
 RAW_EVIDENCE=$(cat <<EOF
 {

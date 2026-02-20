@@ -26,6 +26,7 @@ TARGET_FILE="/etc/security/faillock.conf"
 PAM_SYSTEM_AUTH="/etc/pam.d/system-auth"
 PAM_PASSWORD_AUTH="/etc/pam.d/password-auth"
 
+# 점검 명령
 CHECK_COMMAND="faillock.conf(deny/unlock_time), PAM(system-auth/password-auth)에서 pam_faillock/pam_tally(2) 적용 및 deny 값 확인, authselect with-faillock 여부 확인"
 
 REASON_LINE=""
@@ -77,7 +78,7 @@ pam_has_lock_module() {
     | grep -Eq 'pam_faillock\.so|pam_tally2\.so|pam_tally\.so'
 }
 
-# authselect 설치 여부에 따라 with-faillock 기능 활성 상태를 확인합니다.
+# authselect 설치 여부에 따라 with-faillock 기능 활성 상태 확인
 if command -v authselect >/dev/null 2>&1; then
   if authselect current 2>/dev/null | grep -Eq 'with-faillock'; then
     AUTHSELECT_WITH_FAILLOCK="enabled"
@@ -88,7 +89,7 @@ else
   AUTHSELECT_WITH_FAILLOCK="not_installed"
 fi
 
-# faillock.conf 파일 존재 여부에 따라 deny/unlock_time 값을 수집합니다.
+# faillock.conf 파일 존재 여부에 따라 deny/unlock_time 값 수집
 if [ -f "$TARGET_FILE" ]; then
   DENY_FROM_FAILLOCK_CONF="$(extract_conf_kv_last "$TARGET_FILE" "deny")"
   UNLOCK_FROM_FAILLOCK_CONF="$(extract_conf_kv_last "$TARGET_FILE" "unlock_time")"
@@ -97,7 +98,7 @@ else
   UNLOCK_FROM_FAILLOCK_CONF="file_not_found"
 fi
 
-# PAM 설정 파일(system-auth/password-auth)에서 잠금 모듈 적용 여부 및 deny/unlock_time 값을 수집합니다.
+# PAM 설정 파일(system-auth/password-auth)에서 잠금 모듈 적용 여부 및 deny/unlock_time 값을 수집
 PAM_APPLIED="no"
 PAM_FILES_EXIST="yes"
 
@@ -145,7 +146,7 @@ else
   PAM_MODULE_STATUS="not_applied"
 fi
 
-# PAM 인자에 deny/unlock_time이 있으면 그 값을 우선하고, 없으면 faillock.conf 값을 사용해 실효값을 결정합니다.
+# PAM 인자에 deny/unlock_time이 있으면 그 값을 우선, 없으면 faillock.conf 값을 사용해 실효값 결정
 if is_int "$DENY_FROM_PAM"; then
   EFFECTIVE_DENY="$DENY_FROM_PAM"
   EFFECTIVE_SOURCE="pam"
@@ -194,7 +195,7 @@ effective_unlock_time=${EFFECTIVE_UNLOCK}
 EOF
 )
 
-# 취약/양호에 따라 reason 문장의 "어떠한 이유"에는 설정값만 사용합니다.
+# 취약/양호에 따라 reason 구성
 if [ "$PAM_OK" = "yes" ] && [ "$DENY_OK" = "yes" ] && [ "$UNLOCK_OK" = "yes" ]; then
   STATUS="PASS"
   REASON_LINE="pam_module_status=${PAM_MODULE_STATUS}, effective_deny=${EFFECTIVE_DENY}, effective_unlock_time=${EFFECTIVE_UNLOCK} 로 설정되어 있어 이 항목에 대해 양호합니다."
@@ -215,7 +216,7 @@ else
   REASON_LINE="$(IFS=', '; echo "${VULN_PARTS[*]}") 로 설정되어 있어 이 항목에 대해 취약합니다."
 fi
 
-# 취약 시 자동 조치 가정(방법 + 주의사항)을 줄바꿈 문장으로 구성합니다.
+# 자동 조치 가이드
 GUIDE_LINE=$(cat <<EOF
 자동 조치:
 /etc/security/faillock.conf 파일을 백업한 뒤 deny=10, unlock_time=120 값을 설정합니다.
@@ -227,6 +228,7 @@ system-auth/password-auth를 직접 수정하는 경우 배포/정책 도구(aut
 EOF
 )
 
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -243,6 +245,7 @@ RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

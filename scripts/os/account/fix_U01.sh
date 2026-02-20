@@ -24,17 +24,17 @@
 # ACTION_RESULT="FAIL"
 # ACTION_LOG="N/A"
 
-# # 1. 실제 조치 프로세스 시작
+# # 실제 조치 프로세스 시작
 # if [ -f "$TARGET_FILE" ]; then
 #     # 백업 생성
 #     BACKUP_FILE="${TARGET_FILE}_bak_$(date +%Y%m%d_%H%M%S)"
 #     cp -p "$TARGET_FILE" "$BACKUP_FILE"
     
-#     #  1) 메인 설정 파일 수정: 기존 설정 삭제 후 확실하게 'no' 삽입
+#     # 메인 설정 파일 수정: 기존 설정 삭제 후 확실하게 'no' 삽입
 #     sed -i '/PermitRootLogin/d' "$TARGET_FILE"
 #     echo "PermitRootLogin no" >> "$TARGET_FILE"
     
-#     # 2) .d 폴더 내의 모든 우선순위 설정 무력화
+#     # .d 폴더 내의 모든 우선순위 설정 무력화
 #     if [ -d "$CONF_DIR" ]; then
 #         # 특정 파일(01-permitrootlogin.conf 등) 삭제
 #         rm -f "$CONF_DIR/01-permitrootlogin.conf"
@@ -43,7 +43,7 @@
 #         find "$CONF_DIR" -name "*.conf" -exec sed -i '/PermitRootLogin/d' {} + 2>/dev/null
 #     fi
     
-#     # 3) 서비스 재시작
+#     # 서비스 재시작
 #     systemctl daemon-reload >/dev/null 2>&1
 #     if systemctl restart sshd >/dev/null 2>&1 || systemctl restart ssh >/dev/null 2>&1; then
         
@@ -78,7 +78,7 @@
 #     EVIDENCE="파일 없음"
 # fi
 
-# # 2. JSON 표준 출력
+# # JSON 표준 출력
 # echo ""
 # cat << EOF
 # {

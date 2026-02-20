@@ -35,7 +35,7 @@ MODIFIED=0
 DETAIL_CONTENT=""
 TARGET_FILES_EXIST=""
 
-# 시스템 내 존재하는 syslog 설정 파일을 확인하고 소유자 및 권한 조치를 수행하는 분기점
+# 시스템 내 존재하는 syslog 설정 파일을 확인, 소유자 및 권한 조치를 수행
 for FILE in "${LOG_FILES[@]}"; do
   if [ -f "$FILE" ]; then
     FOUND=1
@@ -57,7 +57,7 @@ for FILE in "${LOG_FILES[@]}"; do
   fi
 done
 
-# 조치 결과 확인을 위해 현재 파일의 설정 상태를 수집하고 성공 여부를 검증하는 분기점
+# 조치 결과 확인을 위해 현재 파일의 설정 상태를 수집, 성공 여부를 검증
 for FILE in "${LOG_FILES[@]}"; do
   if [ -f "$FILE" ]; then
     AFTER_OWNER=$(stat -c "%U" "$FILE" 2>/dev/null)
@@ -77,14 +77,13 @@ file=$FILE
   fi
 done
 
-# 실제 존재하는 파일 목록을 기반으로 타겟 파일 변수를 구성하는 분기점
+# 실제 존재하는 파일 목록 기반 타겟 파일 변수를 구성
 if [ -n "$TARGET_FILES_EXIST" ]; then
   TARGET_FILE="$(printf "%s" "$TARGET_FILES_EXIST" | sed 's/[[:space:]]*$//')"
 else
   TARGET_FILE=$(printf "%s\n" "${LOG_FILES[@]}")
 fi
 
-# 수집된 데이터를 바탕으로 최종 판정 및 REASON_LINE 문구를 생성하는 분기점
 if [ "$FOUND" -eq 0 ]; then
   IS_SUCCESS=1
   REASON_LINE="대상 파일이 존재하지 않아 조치를 완료하여 이 항목에 대해 양호합니다."
@@ -99,7 +98,7 @@ else
   fi
 fi
 
-# RAW_EVIDENCE 작성을 위해 JSON 데이터 구조를 생성하는 분기점
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
@@ -109,12 +108,12 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# JSON 특수 문자 및 줄바꿈을 이스케이프 처리하는 분기점
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 결과 데이터를 JSON 형식으로 출력하는 분기점
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

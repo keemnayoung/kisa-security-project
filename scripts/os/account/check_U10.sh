@@ -23,6 +23,8 @@ STATUS="PASS"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 
 TARGET_FILE="/etc/passwd"
+
+# 점검 명령
 CHECK_COMMAND='[ -f /etc/passwd -a -r /etc/passwd ] && cut -d: -f1,3 /etc/passwd | sort -t: -k2,2n || echo "passwd_not_found_or_not_readable"'
 
 REASON_LINE=""
@@ -31,24 +33,25 @@ DETAIL_CONTENT=""
 DUPS=""
 DUPLICATE_LINES=""
 
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="자동 조치 시 UID 변경으로 인해 파일/디렉터리 소유권 불일치, 서비스 계정 권한 문제, 로그인/프로세스 권한 오동작이 발생할 수 있어 수동 조치가 필요합니다.\n관리자가 직접 중복 UID 계정을 확인한 뒤, 중복 계정 중 하나의 UID를 변경하고 해당 UID로 소유된 파일/디렉터리의 소유권을 올바른 계정으로 재설정해 주시기 바랍니다."
 
-# 분기 1) /etc/passwd 파일 존재 여부 확인
+# /etc/passwd 파일 존재 여부 확인
 if [ -f "$TARGET_FILE" ]; then
-  # 분기 2) /etc/passwd 읽기 가능 여부 확인(읽기 불가 시 점검 불가 처리)
+  # /etc/passwd 읽기 가능 여부 확인(읽기 불가 시 점검 불가 처리)
   if [ ! -r "$TARGET_FILE" ]; then
     STATUS="FAIL"
     REASON_LINE="/etc/passwd 읽기 권한이 없어 점검할 수 있어 이 항목에 대해 취약합니다."
     DETAIL_CONTENT="$(ls -l "$TARGET_FILE" 2>/dev/null || echo "ls_failed")"
   else
-    # 분기 3) 현재 설정값 수집(사용자:UID 목록)
+    # 현재 설정값 수집(사용자:UID 목록)
     PASSWD_UID_LINES="$(cut -d: -f1,3 "$TARGET_FILE" 2>/dev/null | sed '/^[[:space:]]*$/d')"
     if [ -z "$PASSWD_UID_LINES" ]; then
       STATUS="FAIL"
       REASON_LINE="/etc/passwd에서 사용자:UID 값을 추출하지 못해 점검할 수 있어 이 항목에 대해 취약합니다."
       DETAIL_CONTENT="passwd_uid_extract_failed"
     else
-      # 분기 4) 중복 UID 탐지 및 결과 구성
+      # 중복 UID 탐지 및 결과 구성
       DUPS="$(printf "%s\n" "$PASSWD_UID_LINES" | cut -d: -f2 | sort -n | uniq -d)"
 
       if [ -z "$DUPS" ]; then
@@ -70,7 +73,7 @@ if [ -f "$TARGET_FILE" ]; then
     fi
   fi
 else
-  # 분기 5) /etc/passwd 파일이 없는 경우(점검 불가 처리)
+  # /etc/passwd 파일이 없는 경우(점검 불가 처리)
   STATUS="FAIL"
   REASON_LINE="/etc/passwd 파일이 없어 점검할 수 있어 이 항목에 대해 취약합니다."
   DETAIL_CONTENT="passwd_not_found"

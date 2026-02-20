@@ -45,7 +45,7 @@ DETAIL_CONTENT=""
 # 자동 조치 시 권한 체인 단절로 인한 하위 사용자 접근 불가 위험 및 조치 가이드
 GUIDE_LINE="이 항목에 대해서 GRANT OPTION을 자동으로 회수할 경우, 해당 사용자가 다른 사용자에게 부여했던 권한들이 연쇄적으로 회수(CASCADE)되어 업무 프로세스가 중단되거나 서비스 접근 장애가 발생할 수 있는 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 확인 후 REVOKE GRANT OPTION FOR <권한> ON <객체> FROM <계정명> 명령을 사용하여 불필요한 재위임 권한을 수동으로 회수해 주시기 바랍니다."
 
-# 쿼리 실행 결과 및 권한 보유 여부에 따른 판정 분기점
+# 쿼리 실행 결과 및 권한 보유 여부
 if [ $RC -ne 0 ]; then
   STATUS="FAIL"
   REASON_LINE="권한 재위임 정보(role_table_grants)를 조회하지 못하여 점검을 수행할 수 없습니다."
@@ -60,7 +60,7 @@ else
   TOTAL_CNT="$(printf '%s\n' "$TARGET_GRANTS" | sed '/^$/d' | wc -l | xargs)"
   VULN_SUMMARY="$(printf '%s\n' "$TARGET_GRANTS" | sed '/^$/d' | tr '\n' ',' | sed 's/,$//')"
   
-  # 취약 시 취약한 설정 값(권한 목록)을 포함하여 사유 구성 (줄바꿈 없이 한 문장)
+  # 취약 시 취약한 설정 값(권한 목록)을 포함하여 사유 구성
   REASON_LINE="${VULN_SUMMARY}와 같이 일반 사용자에게 권한 재위임이 가능한 GRANT OPTION이 설정되어 있어 이 항목에 대해 취약합니다."
   
   # 현재의 모든 설정 현황을 상세 정보로 구성
@@ -71,7 +71,7 @@ SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 CHECK_COMMAND="information_schema.role_table_grants 기반 GRANT OPTION(is_grantable='YES') 점검"
 TARGET_FILE="information_schema.role_table_grants"
 
-# 요구사항에 맞춘 RAW_EVIDENCE 구조화 및 JSON 이스케이프 적용
+# raw_evidence 구성
 RAW_EVIDENCE_JSON=$(cat <<EOF
 {
   "command": "$(escape_json_str "$CHECK_COMMAND")",
@@ -82,9 +82,10 @@ RAW_EVIDENCE_JSON=$(cat <<EOF
 EOF
 )
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE_JSON")"
 
-# 최종 결과 JSON 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

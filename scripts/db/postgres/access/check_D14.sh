@@ -40,12 +40,12 @@ fi
 POSTGRES_HOME=$(getent passwd "$PG_SUPERUSER" | cut -d: -f6)
 HISTORY_FILE="${POSTGRES_HOME}/.psql_history"
 
-# 파이썬 대시보드 및 DB 저장 시 줄바꿈(\n) 처리를 위한 이스케이프 함수
+# 이스케이프 함수
 escape_json_str() {
   echo "$1" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
-# 개별 파일/디렉터리의 권한 및 소유자를 점검하는 함수 (기존 로직 유지)
+# 개별 파일/디렉터리의 권한 및 소유자를 점검하는 함수
 check_item() {
   local file="$1"
   local max_mode="$2"
@@ -115,7 +115,7 @@ SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 CHECK_COMMAND="stat 기반 주요 파일/디렉터리 권한·소유자 점검(data_directory/config_file/hba_file/log_directory/.psql_history)"
 TARGET_FILE="${DATA_DIR},${CONF_FILE},${HBA_FILE},${IDENT_FILE},${HISTORY_FILE},${LOG_DIR}"
 
-# 요구사항을 반영한 RAW_EVIDENCE JSON 구성
+# raw_evidence 구성
 RAW_EVIDENCE_JSON=$(cat <<EOF
 {
   "command": "$(escape_json_str "$CHECK_COMMAND")",
@@ -126,9 +126,10 @@ RAW_EVIDENCE_JSON=$(cat <<EOF
 EOF
 )
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE_JSON")"
 
-# 최종 결과 JSON 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

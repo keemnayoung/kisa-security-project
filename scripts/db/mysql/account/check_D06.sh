@@ -69,7 +69,7 @@ DETAIL_CONTENT=""
 GUIDE_LINE="이 항목에 대해서 현재 애플리케이션이 공용 계정으로 연결되어 있는 경우, 자동 삭제 시 서비스 접속 불가 및 데이터베이스 연동 장애가 발생할 수 있는 위험이 존재하여 수동 조치가 필요합니다.
 관리자가 직접 확인 후 불필요한 공용/테스트 계정을 삭제하고 실제 사용자별로 개별 계정을 생성하여 최소 권한을 부여하는 방식으로 조치해 주시기 바랍니다."
 
-# 데이터베이스 접속 결과에 따른 분기 처리
+# 데이터베이스 접속 결과
 if [[ "$RESULT" == "ERROR_TIMEOUT" ]]; then
   STATUS="FAIL"
   REASON_LINE="MySQL 계정 정보 조회가 제한 시간(${MYSQL_TIMEOUT}초)을 초과하여 점검을 완료하지 못했습니다."
@@ -122,7 +122,7 @@ else
   DETAIL_CONTENT="[현재 사용자 계정 설정 현황]\n${TOTAL_USER_INFO}"
 fi
 
-# 증적 데이터를 JSON 형식으로 구조화
+# raw_evidence 구성
 CHECK_COMMAND="$MYSQL_CMD \"$QUERY\""
 RAW_EVIDENCE=$(cat <<EOF
 {
@@ -134,12 +134,12 @@ RAW_EVIDENCE=$(cat <<EOF
 EOF
 )
 
-# 파이썬 및 DB에서 줄바꿈이 유지되도록 이스케이프 처리
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED=$(echo "$RAW_EVIDENCE" \
   | sed 's/"/\\"/g' \
   | sed ':a;N;$!ba;s/\n/\\n/g')
 
-# 최종 JSON 포맷 결과 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat << EOF
 {

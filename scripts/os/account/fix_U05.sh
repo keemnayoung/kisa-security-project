@@ -86,7 +86,7 @@ else
     REASON_LINE="root 이외에 UID가 0인 계정이 존재하지 않아 별도의 변경 없이 이 항목에 대해 양호합니다."
     DETAIL_CONTENT="UID 0 사용자: root"
   else
-    # 프로세스 사용 여부 및 PID 1 매핑에 따른 조치 중단 분기점
+    # 프로세스 사용 여부 및 PID 1 매핑에 따른 조치 중단
     BLOCKED_USERS=""
     for user in $EXTRA_ROOT_LOCAL; do
       if is_pid1_mapped_to_user "$user"; then
@@ -103,7 +103,7 @@ else
       REASON_LINE="해당 계정이 프로세스에서 사용 중이거나 시스템 핵심 서비스에 매핑되어 있는 이유로 조치에 실패하여 여전히 이 항목에 대해 취약합니다."
       DETAIL_CONTENT="$BLOCKED_USERS"
     else
-      # 실제 UID 변경 수행 분기점
+      # 실제 UID 변경 수행
       for user in $EXTRA_ROOT_LOCAL; do
         OLD_UID=$(awk -F: -v U="$user" '$1==U {print $3}' "$PASSWD_FILE" 2>/dev/null)
         NEW_UID=$(get_unused_uid)
@@ -123,7 +123,7 @@ else
         fi
       done
 
-      # 조치 결과 재수집 및 최종 판정 분기점
+      # 조치 결과 재수집 및 최종 판정
       REMAIN_USERS=$(awk -F: '$3 == 0 && $1 != "root" {print $1}' "$PASSWD_FILE" 2>/dev/null | sed 's/[[:space:]]*$//')
 
       if [ -z "$REMAIN_USERS" ] && [ "$FAIL_FLAG" -eq 0 ]; then

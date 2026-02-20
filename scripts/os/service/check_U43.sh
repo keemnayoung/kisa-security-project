@@ -17,14 +17,14 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 1. 항목 정보 정의
+# 기본 변수
 ID="U-43"
 CATEGORY="서비스 관리"
 TITLE="NIS, NIS+ 점검"
 IMPORTANCE="상"
 TARGET_FILE="N/A"
 
-# 2. 진단 로직
+# 진단 로직
 STATUS="PASS"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 
@@ -36,13 +36,13 @@ ACTIVE_FOUND=""
 ENABLED_FOUND=""
 FOUND_ANY=0
 
-# 분기 1) systemctl 사용 불가 시: 점검 자체 불가(ERROR)
+# systemctl 사용 불가 시 점검 자체 불가
 if ! command -v systemctl >/dev/null 2>&1; then
   STATUS="ERROR"
   ACTIVE_FOUND="systemctl_not_found"
   ENABLED_FOUND="systemctl_not_found"
 else
-  # 분기 2) active(현재 실행) 탐지: list-units 기반(현재 떠있는 서비스 위주)
+  # active 탐지: list-units 기반(현재 떠있는 서비스 위주)
   ACTIVE_LIST="$(systemctl list-units --type=service 2>/dev/null | awk '{print $1}' | grep -E 'ypserv|ypbind|ypxfrd|rpc\.yppasswdd|rpc\.ypupdated' | tr '\n' ' ' | sed 's/[[:space:]]\+$//')"
   if [ -n "$ACTIVE_LIST" ]; then
     ACTIVE_FOUND="$ACTIVE_LIST"
@@ -51,7 +51,7 @@ else
     ACTIVE_FOUND="none"
   fi
 
-  # 분기 3) enabled(부팅 자동 시작) 탐지: is-enabled 기반(현재 꺼져있어도 enabled면 취약)
+  # enabled 탐지: is-enabled 기반(현재 꺼져있어도 enabled면 취약)
   for unit in "${NIS_UNITS[@]}"; do
     en_state="$(systemctl is-enabled "$unit" 2>/dev/null | tr -d '\r')"
     if [ "$en_state" = "enabled" ]; then
@@ -62,7 +62,7 @@ else
   ENABLED_FOUND="$(echo "$ENABLED_FOUND" | sed 's/[[:space:]]\+$//')"
   [ -z "$ENABLED_FOUND" ] && ENABLED_FOUND="none"
 
-  # 분기 4) active 또는 enabled가 하나라도 있으면 FAIL
+  # active 또는 enabled가 하나라도 있으면 FAIL
   if [ "$FOUND_ANY" -eq 1 ]; then
     STATUS="FAIL"
   else
@@ -70,16 +70,15 @@ else
   fi
 fi
 
-# DETAIL_CONTENT: 양호/취약 무관하게 "현재 설정 값"만 출력
+# DETAIL_CONTENT 구성
 DETAIL_CONTENT="active: ${ACTIVE_FOUND}
 enabled: ${ENABLED_FOUND}"
 
-# detail의 "이유"는 가이드 문구 없이 실제 설정값만으로 자연스럽게 구성
 DETAIL_PREFIX=""
 if [ "$STATUS" = "PASS" ]; then
   DETAIL_PREFIX="active: none, enabled: none 로 설정되어 있어 이 항목에 대해 양호합니다."
 elif [ "$STATUS" = "FAIL" ]; then
-  # 취약 시에는 취약한 부분의 설정만 이유로 노출
+  # 취약 시에는 취약한 부분의 설정만
   if [ "${ACTIVE_FOUND}" != "none" ] && [ "${ENABLED_FOUND}" != "none" ]; then
     DETAIL_PREFIX="active: ${ACTIVE_FOUND}, enabled: ${ENABLED_FOUND} 로 설정되어 있어 이 항목에 대해 취약합니다."
   elif [ "${ACTIVE_FOUND}" != "none" ]; then
@@ -91,7 +90,8 @@ else
   DETAIL_PREFIX="systemctl 사용 불가로 현재 설정 값을 확인하지 못해 이 항목에 대해 판단할 수 없습니다."
 fi
 
-# guide: 취약일 때를 가정한 "자동 조치 방법 + 주의사항" (조치 스크립트 로직 기반)
+
+# 취약 가정 자동 조치
 GUIDE_LINE="자동 조치: 
 탐지된 NIS 관련 서비스 유닛에 대해 systemctl stop <unit> 으로 중지하고 systemctl disable <unit> 으로 부팅 자동 시작을 해제합니다.
 조치 후 systemctl is-active/is-enabled 재점검으로 active/enabled 잔존 여부를 확인합니다.
@@ -103,6 +103,7 @@ escape_json_str() {
   printf '%s' "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/\n/\\n/g;s/"/\\"/g'
 }
 
+# raw_evidence 구성
 RAW_EVIDENCE_JSON="$(cat <<EOF
 {
   "command":"$(escape_json_str "$CHECK_COMMAND")",
@@ -113,9 +114,10 @@ RAW_EVIDENCE_JSON="$(cat <<EOF
 EOF
 )"
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE_JSON")"
 
-# JSON 출력 직전 빈 줄(프로젝트 규칙)
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

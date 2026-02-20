@@ -29,21 +29,21 @@ TMP_RESULT_VIEW="/tmp/U25_world_writable_files_view.txt"
 DETAIL_CONTENT=""
 REASON_LINE=""
 
-# 점검: world writable 파일 탐색(가상/런타임 파일시스템 제외)
+# world writable 파일 탐색(가상/런타임 파일시스템 제외)
 find / \( -path /proc -o -path /sys -o -path /run -o -path /dev \) -prune -o -type f -perm -2 -exec ls -l {} \; 2>/dev/null > "$TMP_RESULT_FULL"
 
 FILE_COUNT=$(wc -l < "$TMP_RESULT_FULL" 2>/dev/null | tr -d ' ')
 
-# 출력 과도 방지용으로 detail에 넣을 목록은 상위 일부만 사용(현재 설정값 표시 목적)
+# 출력 과도 방지용으로 detail에 넣을 목록은 상위 일부만 사용
 head -n 300 "$TMP_RESULT_FULL" > "$TMP_RESULT_VIEW" 2>/dev/null
 
 if [ "${FILE_COUNT:-0}" -eq 0 ]; then
-    # 양호 분기
+    # 양호
     STATUS="PASS"
     REASON_LINE="world writable 파일이 0건으로 확인되어 이 항목에 대해 양호합니다."
     DETAIL_CONTENT="world writable 파일 검색 결과: 0건"
 else
-    # 취약 분기(기술적으로는 취약이며, 인지 여부는 관리자가 판단)
+    # 취약 (기술적인 취약, 인지 여부는 관리자가 판단)
     STATUS="FAIL"
     FIRST_LINE="$(sed -n '1p' "$TMP_RESULT_FULL" 2>/dev/null)"
     if [ -n "$FIRST_LINE" ]; then
@@ -59,6 +59,7 @@ else
     fi
 fi
 
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="자동으로 권한을 변경하거나 파일을 삭제하면 해당 파일을 필요로 하는 서비스/배치/응용 프로그램에 장애가 발생할 수 있습니다.
 관리자가 world writable 파일 목록을 직접 확인한 뒤 불필요한 경우 chmod o-w <파일>로 쓰기 권한을 제거하거나 rm <파일>로 제거해 주시기 바랍니다."
 

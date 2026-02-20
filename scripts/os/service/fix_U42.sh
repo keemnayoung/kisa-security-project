@@ -15,7 +15,7 @@
 # @Reference : 2026 KISA 주요정보통신기반시설 기술적 취약점 분석·평가 상세 가이드
 # ============================================================================
 
-# 기본 변수 설정 분기점
+# 기본 변수
 ID="U-42"
 ACTION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 IS_SUCCESS=0
@@ -71,7 +71,7 @@ ACTION_ERR_LOG=""
 MODIFIED=0
 FAIL_FLAG=0
 
-# 유틸리티 함수 정의 분기점
+# 유틸리티 함수 정의
 append_err() {
   [ -n "$ACTION_ERR_LOG" ] && ACTION_ERR_LOG="${ACTION_ERR_LOG}\n$1" || ACTION_ERR_LOG="$1"
 }
@@ -103,7 +103,7 @@ disable_systemd_unit_if_exists() {
   MODIFIED=1
 }
 
-# 기존 백업 파일 정리 및 권한 체크 분기점
+# 기존 백업 파일 정리 및 권한 체크
 if [ "$(id -u)" -eq 0 ] && [ -d /etc/xinetd.d ]; then
   mv -f /etc/xinetd.d/*.bak_* "$BACKUP_DIR"/ 2>/dev/null || true
 fi
@@ -114,7 +114,7 @@ if [ "$(id -u)" -ne 0 ]; then
   append_detail "current_uid: $(id -u)"
 else
 
-  # 1) inetd 기반 RPC 서비스 조치 분기점
+  # 1) inetd 기반 RPC 서비스 조치
   if [ -f "/etc/inetd.conf" ]; then
     INETD_NEED_RESTART=0
     for svc in "${UNNEEDED_RPC_SERVICES[@]}"; do
@@ -128,7 +128,7 @@ else
     [ "$INETD_NEED_RESTART" -eq 1 ] && restart_inetd_if_exists
   fi
 
-  # 2) xinetd 기반 RPC 서비스 조치 분기점
+  # 2) xinetd 기반 RPC 서비스 조치
   XINETD_CHANGED=0
   if [ -d "/etc/xinetd.d" ]; then
     for conf in /etc/xinetd.d/*; do
@@ -178,13 +178,13 @@ else
   fi
   [ "$XINETD_CHANGED" -eq 1 ] && restart_xinetd_if_exists
 
-  # 3) systemd 기반 RPC 서비스 조치 분기점
+  # 3) systemd 기반 RPC 서비스 조치
   for u in "${RPC_UNITS_CANDIDATES[@]}"; do
     disable_systemd_unit_if_exists "$u"
   done
 fi
 
-# 4) 조치 후 결과 검증 및 상태 수집 분기점
+# 4) 조치 후 결과 검증 및 상태 수집
 INETD_POST="inetd_conf_not_found"
 if [ -f "/etc/inetd.conf" ]; then
   INETD_POST="$(grep -nEv '^[[:space:]]*#' /etc/inetd.conf 2>/dev/null | egrep -n "^[[:space:]]*(rpc\.cmsd|rpc\.ttdbserverd|sadmind|rusersd|walld|sprayd|rstatd|rpc\.nisd|rexd|rpc\.pcnfsd|rpc\.statd|rpc\.ypupdated|rpc\.rquotad|kcms_server|cachefsd)([[:space:]]|$)" | head -n 10)"
@@ -228,7 +228,7 @@ else
   append_detail "systemctl_not_found"
 fi
 
-# 최종 판정 및 REASON_LINE 확정 분기점
+# 최종 판정 및 REASON_LINE 확정
 if [ "$FAIL_FLAG" -eq 0 ]; then
   IS_SUCCESS=1
   REASON_LINE="불필요한 RPC 서비스를 주석 처리하거나 중지 및 비활성화하여 조치를 완료하여 이 항목에 대해 양호합니다."
@@ -241,7 +241,7 @@ if [ -n "$ACTION_ERR_LOG" ]; then
   DETAIL_CONTENT="$DETAIL_CONTENT\n[Error_Log]\n$ACTION_ERR_LOG"
 fi
 
-# 결과 데이터 구성 및 출력 분기점
+# raw_evidence 구성
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

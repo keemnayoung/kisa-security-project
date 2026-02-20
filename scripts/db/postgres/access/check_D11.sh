@@ -25,7 +25,7 @@ STATUS="FAIL"
 # 허용된 DBA 계정 목록 구성
 ALLOWED_DBA_RAW="${D11_ALLOWED_DBA:-},postgres,${POSTGRES_USER},${PG_SUPERUSER}"
 
-# 계정의 DBA 권한 허용 여부 확인 함수 (기존 로직 유지)
+# 계정의 DBA 권한 허용 여부 확인 함수
 is_allowed_dba() {
   local acct="$1"
   local one=""
@@ -38,12 +38,12 @@ is_allowed_dba() {
   return 1
 }
 
-# 파이썬 대시보드 및 DB 저장 시 줄바꿈(\n) 처리를 위한 이스케이프 함수
+# 이스케이프 함수
 escape_json_str() {
   echo "$1" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
-# 시스템 스키마 접근 위험 권한 후보 조회 (기존 쿼리 로직 유지)
+# 시스템 스키마 접근 위험 권한 후보 조회
 RISK_CANDIDATES=$(run_psql "
 WITH risk_role_member AS (
   SELECT DISTINCT m.rolname AS account
@@ -90,7 +90,7 @@ DETAIL_CONTENT=""
 # 자동 조치 시 권한 부족으로 인한 애플리케이션 장애 위험과 수동 조치 가이드
 GUIDE_LINE="이 항목에 대해서 시스템 테이블 접근 권한을 자동으로 회수할 경우, 해당 계정을 사용하는 운영 애플리케이션이나 모니터링 도구가 메타데이터를 조회하지 못해 서비스 장애가 발생할 수 있는 위험이 존재하여 수동 조치가 필요합니다.\n관리자가 직접 확인 후 미인가 계정에 대해 REVOKE 명령어를 사용하여 pg_catalog 및 information_schema 스키마에 대한 접근 권한을 회수하거나, pg_read_all_data와 같은 위험 내장 롤 멤버십을 제거하여 조치해 주시기 바랍니다."
 
-# 쿼리 실행 성공 여부에 따른 점검 분기점
+# 쿼리 실행 성공 여부에 따른 점검
 if [ $RC -ne 0 ]; then
   STATUS="FAIL"
   REASON_LINE="데이터베이스 시스템 권한 정보를 조회할 수 없어 미인가 계정 점검을 수행하지 못했습니다."
@@ -108,7 +108,7 @@ else
 
   FILTERED_CSV="$(echo "$FILTERED" | sed '/^$/d' | tr '\n' ',' | sed 's/,$//')"
 
-  # 점검 결과 판정 및 문장 구성 분기점
+  # 점검 결과 판정 및 문장 구성
   if [ -z "$FILTERED_CSV" ]; then
     STATUS="PASS"
     REASON_LINE="허용되지 않은 일반 계정 중 시스템 스키마 접근 권한을 가진 계정이 존재하지 않아 이 항목에 대해 양호합니다."
@@ -127,7 +127,7 @@ SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 CHECK_COMMAND="시스템 스키마 권한 위험 후보(role membership/table grants) 조회"
 TARGET_FILE="pg_auth_members,information_schema.table_privileges"
 
-# 요구사항을 반영한 RAW_EVIDENCE JSON 구성
+# raw_evidence 구성
 RAW_EVIDENCE_JSON=$(cat <<EOF
 {
   "command": "$(escape_json_str "$CHECK_COMMAND")",
@@ -138,9 +138,10 @@ RAW_EVIDENCE_JSON=$(cat <<EOF
 EOF
 )
 
+# JSON escape 처리 (따옴표, 줄바꿈)
 RAW_EVIDENCE_ESCAPED="$(escape_json_str "$RAW_EVIDENCE_JSON")"
 
-# 최종 결과 출력
+# scan_history 저장용 JSON 출력
 echo ""
 cat <<EOF
 {

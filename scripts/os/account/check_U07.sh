@@ -23,6 +23,8 @@ STATUS="FAIL"
 SCAN_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
 
 TARGET_FILE="/etc/passwd"
+
+# 점검 명령
 CHECK_COMMAND='[ -f /etc/passwd ] && egrep "^(lp|uucp|nuucp):" /etc/passwd || echo "passwd_not_found_or_no_matches"'
 
 DETAIL_CONTENT=""
@@ -54,13 +56,14 @@ is_nonlogin_shell() {
   return 1
 }
 
+# 자동조치 위험 + 조치 방법
 GUIDE_LINE="이 항목에 대해서 서비스 계정 또는 사용자 계정을 자동으로 삭제/잠금 처리할 경우 업무 서비스 장애, 인증 실패, 자동화 작업 중단, 권한 의존 서비스 오동작 등의 위험이 존재하여 수동 조치가 필요합니다.
 관리자가 직접 확인 후 불필요 계정(lp/uucp/nuucp 등) 사용 여부를 검토하고, 불필요하면 삭제하거나 로그인 불가 쉘(/sbin/nologin 또는 /bin/false)로 변경해 주시기 바랍니다.
 장기간 미사용으로 표시된 계정은 퇴직/휴직/전환 여부를 확인한 뒤 삭제 또는 잠금 처리하고, 조치 후 영향도(서비스/배치/권한)를 점검해 주시기 바랍니다."
 
-# 분기 1: /etc/passwd 파일 존재 여부에 따라 점검 가능/불가를 결정
+# /etc/passwd 파일 존재 여부에 따라 점검 가능/불가를 결정
 if [ -f "$TARGET_FILE" ]; then
-    # 분기 1-1: 기본 불필요 계정(lp/uucp/nuucp) 존재 시 로그인 가능 여부(쉘)까지 수집
+    # 기본 불필요 계정(lp/uucp/nuucp) 존재 시 로그인 가능 여부(쉘)까지 수집
     for acc in "${DEFAULT_UNUSED_ACCOUNTS[@]}"; do
         if grep -q "^${acc}:" "$TARGET_FILE" 2>/dev/null; then
             FOUND_ACCOUNTS+=("$acc")
@@ -75,7 +78,7 @@ if [ -f "$TARGET_FILE" ]; then
         fi
     done
 
-    # 분기 1-2: lastlog 기반으로 장기간 미사용(UNUSED_DAYS) + 로그인 가능(대화형) 계정 후보 수집
+    # lastlog 기반으로 장기간 미사용(UNUSED_DAYS) + 로그인 가능 계정 후보 수집
     if command -v lastlog >/dev/null 2>&1; then
         mapfile -t LL_USERS < <(lastlog -b "$UNUSED_DAYS" 2>/dev/null | awk 'NR>1 && $1!="" {print $1}' | sort -u)
         for u in "${LL_USERS[@]}"; do
@@ -102,7 +105,6 @@ if [ -f "$TARGET_FILE" ]; then
         fi
     fi
 
-    # 분기 1-3: DETAIL_CONTENT는 양호/취약과 무관하게 “현재 설정 값들”을 항상 출력
     DETAIL_CONTENT=$(
 cat <<EOF
 default_accounts_found=$(printf "%s" "$(printf "%s\n" "${FOUND_ACCOUNTS[@]}" 2>/dev/null | sed '/^$/d' | paste -sd ',' -)" )
@@ -115,7 +117,7 @@ warnings=$(printf "%s" "$(printf "%s\n" "${WARNINGS[@]}" 2>/dev/null | sed '/^$/
 EOF
 )
 
-    # 분기 1-4: PASS/FAIL 판정 및 “어떠한 이유”를 설정 값 기반으로 한 문장으로 구성
+    # PASS/FAIL 판정 및 “어떠한 이유”를 설정 값 기반으로 한 문장으로 구성
     if [ ${#DEFAULT_LOGINABLE_ACCOUNTS[@]} -gt 0 ] || [ ${#UNUSED_INTERACTIVE_ACCOUNTS[@]} -gt 0 ]; then
         STATUS="FAIL"
         VULN_DEFAULT="$(printf "%s\n" "${DEFAULT_LOGINABLE_ACCOUNTS[@]}" 2>/dev/null | sed '/^$/d' | paste -sd ',' -)"
@@ -130,14 +132,14 @@ EOF
         DETAIL_HEADER="default_accounts_loginable=(none) unused_interactive_accounts_uid>=1000_loginable=(none)이며 default_accounts_nonlogin=${GOOD_DEFAULT_NONLOGIN}로 이 항목에 대해 양호합니다."
     fi
 else
-    # 분기 2: /etc/passwd 미존재로 점검 불가 → 설정 값 기반으로 취약 판정
+    # /etc/passwd 미존재로 점검 불가 → 설정 값 기반으로 취약 판정
     STATUS="FAIL"
     DETAIL_CONTENT="target_file=${TARGET_FILE}
 passwd_status=not_found"
     DETAIL_HEADER="target_file=${TARGET_FILE}가 존재하지 않아 이 항목에 대해 취약합니다."
 fi
 
-# RAW_EVIDENCE 구성 (detail: 1줄 요약 + 줄바꿈 + 현재 설정 값들, guide: 여러 문장을 줄바꿈으로)
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",

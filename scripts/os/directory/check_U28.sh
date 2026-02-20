@@ -38,10 +38,11 @@ IPT_VULN_DESC=""
 FWD_VULN_DESC=""
 UFW_VULN_DESC=""
 
+# 점검 명령
 GUIDE_LINE="자동 조치 시 방화벽 정책 변경으로 원격 접속(예: SSH) 또는 서비스 통신이 차단되어 장애가 발생할 수 있어 수동 조치가 필요합니다. 
 관리자가 직접 확인 후 OS 방화벽 또는 TCP Wrapper에서 허용할 IP와 포트만 접근 가능하도록 정책을 등록해 주시기 바랍니다."
 
-# 현재 설정값 수집용(DETAIL_CONTENT)
+# 현재 설정값
 TCPW_CUR=""
 IPT_CUR=""
 FWD_CUR=""
@@ -169,7 +170,7 @@ else
   UFW_VULN_DESC="ufw 명령을 찾을 수 없습니다"
 fi
 
-# 최종 판단 및 REASON_LINE/DETAIL_CONTENT 구성
+# 최종 판단
 if [ "$FOUND_GOOD" = "Y" ]; then
   STATUS="PASS"
 
@@ -192,18 +193,17 @@ else
   if [ -n "$UFW_VULN_DESC" ]; then VULN_REASON+="${UFW_VULN_DESC}\n"; fi
   VULN_REASON="$(printf "%b" "$VULN_REASON" | sed 's/[[:space:]]*$//')"
 
-  # 평가 문장은 1줄(줄바꿈 없음)이어야 하므로, 취약 사유는 ";"로 연결
   VULN_ONE_LINE="$(echo "$VULN_REASON" | tr '\n' ';' | sed 's/;*$//' )"
   REASON_LINE="${VULN_ONE_LINE} 상태로 접속 IP 및 포트 제한이 충분히 적용되지 않아 이 항목에 대해 취약합니다."
 fi
 
-# DETAIL_CONTENT는 PASS/FAIL 무관하게 "현재 설정값 전체"를 줄바꿈으로 제공
+# DETAIL_CONTENT 구성
 DETAIL_CONTENT="$(printf "%b\n%b\n%b\n%b" "$TCPW_CUR" "$IPT_CUR" "$FWD_CUR" "$UFW_CUR" | sed 's/[[:space:]]*$//')"
 
 TARGET_FILE="$(echo "$TARGET_FILE" | tr -s ' ' | sed 's/[[:space:]]*$//')"
 [ -z "$TARGET_FILE" ] && TARGET_FILE="N/A"
 
-# raw_evidence 구성 (detail: 1줄 평가 문장 + 다음 줄부터 DETAIL_CONTENT)
+# raw_evidence 구성(모든 값은 문장/항목 단위로 줄바꿈 가능)
 RAW_EVIDENCE=$(cat <<EOF
 {
   "command": "$CHECK_COMMAND",
